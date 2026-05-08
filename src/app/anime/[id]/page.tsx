@@ -33,8 +33,8 @@ export default function AnimePage() {
     const loadAnime = async () => {
       try {
         setLoading(true)
-        let data = await getAnimeByMalId(animeId)
-        if (!data) data = await getAnimeById(animeId)
+        let data = await getAnimeById(animeId)
+        if (!data) data = await getAnimeByMalId(animeId)
         setAnime(data)
       } catch (err: any) {
         console.error('Error loading anime:', err)

@@ -35,13 +35,14 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
     ongoing: 'Выходит',
     released: 'Завершено',
   }
-  const malId = anime.mal_id || anime.id
+  const urlId = anime.id
+  const collectionId = anime.mal_id || anime.id
 
   return (
     <>
       <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-[0_18px_60px_rgba(8,8,20,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_24px_80px_rgba(168,85,247,0.2)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.2),transparent_55%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <Link href={`/anime/${malId}`}>
+        <Link href={`/anime/${urlId}`}>
           <div className="relative card-image">
             {imageError || !imageUrl ? (
               <div className="w-full h-full flex items-center justify-center bg-[#0d0f1a]">
@@ -93,7 +94,7 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
         </Link>
 
         <div className="p-2.5 sm:p-3.5 space-y-1.5 sm:space-y-2">
-          <Link href={`/anime/${malId}`}>
+          <Link href={`/anime/${urlId}`}>
             <h3 className="text-[0.65rem] sm:text-sm font-semibold leading-snug line-clamp-2 transition-colors duration-150 group-hover:text-primary">
               {title}
             </h3>
@@ -165,14 +166,14 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
       <AddToCollectionDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
-        animeId={malId}
+        animeId={collectionId}
         animeTitle={title}
       />
 
       <ShareAnimeDialog
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
-        animeId={malId}
+        animeId={collectionId}
         animeTitle={title}
       />
     </>
