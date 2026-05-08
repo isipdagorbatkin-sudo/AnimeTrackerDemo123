@@ -130,11 +130,12 @@ export default function AnimePage() {
                 <img
                   src={imageUrl}
                   alt={title}
-                  className="w-full aspect-[2/3] object-cover"
+                  className="w-full max-w-[250px] mx-auto aspect-[2/3] object-scale-down"
+                  style={{ objectFit: 'scale-down' }}
                   onError={() => setImageError(true)}
                 />
               ) : (
-                <div className="w-full aspect-[2/3] bg-gradient-to-br from-primary/50 to-primary/30 flex items-center justify-center">
+                <div className="w-full max-w-[250px] mx-auto aspect-[2/3] bg-gradient-to-br from-primary/50 to-primary/30 flex items-center justify-center">
                   <ImageIcon className="h-24 w-24 text-muted-foreground" />
                 </div>
               )}
