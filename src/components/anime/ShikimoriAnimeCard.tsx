@@ -57,8 +57,9 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
                 <img
                   src={imageUrl}
                   alt={title}
+                  style={{ objectFit: 'scale-down' }}
                   className={cn(
-                    'w-full h-full object-scale-down transition-all duration-300 group-hover:scale-105',
+                    'w-full h-full transition-all duration-300 group-hover:scale-105',
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   )}
                   loading="lazy"
