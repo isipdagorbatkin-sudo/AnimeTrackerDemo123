@@ -5,26 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Filter, X, Search } from 'lucide-react'
-import { translateGenre } from '@/lib/genres'
-
-const JIKAN_GENRES = [
-  'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Mecha', 'Music',
-  'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life', 'Sports', 'Supernatural',
-  'Thriller', 'Award Winning', 'Boys Love', 'Girls Love', 'Gourmet', 'Isekai', 'Suspense',
-  'Avant Garde', 'Ecchi', 'Erotica', 'Hentai', 'Mahou Shoujo', 'Mahou Shounen', 'Parody',
-  'Samurai', 'Shoujo', 'Shounen', 'Space', 'Vampire', 'Yaoi', 'Yuri', 'Kids', 'Cars',
-  'Dementia', 'Game', 'Military', 'Police', 'Super Power', 'Demons', 'Historical',
-  'Martial Arts', 'School', 'Seinen', 'Josei', 'Harem', 'Magic', 'Visual Arts', 'Workplace',
-  'Reincarnation', 'Reverse Harem', 'Time Travel', 'Video Game', 'Cyberpunk', 'Steampunk',
-  'Post-Apocalyptic', 'Zombies', 'Aliens', 'Robots', 'Survival', 'Tragedy', 'Wuxia', 'Xianxia',
-  'Iyashikei', 'Chibi', 'CGDCT', 'Anthology', 'Crossdressing', 'Delinquents', 'Gag Humor',
-  'High Stakes Games', 'Idols', 'Love Polygon', 'Otaku Culture', 'Showbiz', 'Strategy Game',
-  'Tournament', 'Urban Fantasy', 'Villainess', 'Virtual Reality', 'Childcare', 'Cooking',
-  'Detective', 'Educational', 'Family', 'Medical', 'Organized Crime', 'Performing Arts', 'Racing',
-  'Showbiz', 'Team Sports', 'Traditional Games', 'Adult Cast', 'Anthropomorphic', 'CGI',
-  'Child Protagonist', 'Empire', 'Fantasy World',
-]
+import { Filter, X, Search, Loader2 } from 'lucide-react'
+import { getShikimoriGenres, ShikimoriGenre } from '@/lib/shikimori/genres'
 
 interface GenreFilterDialogProps {
   isOpen: boolean
@@ -35,20 +17,30 @@ interface GenreFilterDialogProps {
 
 export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelect }: GenreFilterDialogProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [genres, setGenres] = useState<ShikimoriGenre[]>([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (isOpen) setSearchQuery('')
+    if (isOpen) {
+      setSearchQuery('')
+      if (genres.length === 0) {
+        setLoading(true)
+        getShikimoriGenres().then(all => {
+          setGenres(all.filter(g => g.kind === 'anime'))
+        }).finally(() => setLoading(false))
+      }
+    }
   }, [isOpen])
 
   const filteredGenres = useMemo(() => {
-    if (!searchQuery.trim()) return JIKAN_GENRES
+    if (!searchQuery.trim()) return genres
     const q = searchQuery.toLowerCase().trim()
-    return JIKAN_GENRES.filter(genre => {
-      const ru = translateGenre(genre).toLowerCase()
-      const en = genre.toLowerCase()
+    return genres.filter(g => {
+      const ru = g.russian.toLowerCase()
+      const en = g.name.toLowerCase()
       return ru.includes(q) || en.includes(q)
     })
-  }, [searchQuery])
+  }, [searchQuery, genres])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -74,37 +66,43 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
           />
         </div>
 
-        <div className="flex flex-wrap gap-2 py-2">
-          {filteredGenres.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">Жанры не найдены</p>
-          ) : filteredGenres.map((genre) => {
-            const isActive = selectedGenre === genre
-            return (
-              <Badge
-                key={genre}
-                variant={isActive ? 'default' : 'secondary'}
-                className={`cursor-pointer transition-all duration-200 hover:scale-105 select-none text-xs px-3 py-1.5 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-transparent shadow-lg shadow-purple-500/20'
-                    : 'bg-white/[0.03] text-muted-foreground/80 border-border/30 hover:bg-purple-500/10 hover:text-purple-300 hover:border-purple-500/30'
-                }`}
-                onClick={() => {
-                  onGenreSelect(selectedGenre === genre ? '' : genre)
-                  onClose()
-                }}
-              >
-                {translateGenre(genre)}
-              </Badge>
-            )
-          })}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 py-2">
+            {filteredGenres.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">Жанры не найдены</p>
+            ) : filteredGenres.map((genre) => {
+              const isActive = selectedGenre === genre.name
+              return (
+                <Badge
+                  key={genre.id}
+                  variant={isActive ? 'default' : 'secondary'}
+                  className={`cursor-pointer transition-all duration-200 hover:scale-105 select-none text-xs px-3 py-1.5 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-transparent shadow-lg shadow-purple-500/20'
+                      : 'bg-white/[0.03] text-muted-foreground/80 border-border/30 hover:bg-purple-500/10 hover:text-purple-300 hover:border-purple-500/30'
+                  }`}
+                  onClick={() => {
+                    onGenreSelect(selectedGenre === genre.name ? '' : genre.name)
+                    onClose()
+                  }}
+                >
+                  {genre.russian || genre.name}
+                </Badge>
+              )
+            })}
+          </div>
+        )}
 
         {selectedGenre && (
           <div className="flex items-center justify-between pt-4 border-t border-border/40">
             <span className="text-sm text-muted-foreground/70">
               Выбран:{' '}
               <span className="text-foreground font-semibold text-primary">
-                {translateGenre(selectedGenre)}
+                {genres.find(g => g.name === selectedGenre)?.russian || selectedGenre}
               </span>
             </span>
             <Button

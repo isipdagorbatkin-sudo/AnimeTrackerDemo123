@@ -1,11 +1,18 @@
-let genreCache: Array<{ id: number; name: string; russian: string }> | null = null
+export interface ShikimoriGenre {
+  id: number
+  name: string
+  russian: string
+  kind: string
+}
 
-export async function getShikimoriGenres(): Promise<Array<{ id: number; name: string; russian: string }>> {
+let genreCache: ShikimoriGenre[] | null = null
+
+export async function getShikimoriGenres(): Promise<ShikimoriGenre[]> {
   if (genreCache) return genreCache
   const res = await fetch('/api/shikimori/genres')
   if (!res.ok) return []
-  const data: Array<{ id: number; name: string; russian: string; kind: string; entry_type: string }> = await res.json()
-  genreCache = data.map(g => ({ id: g.id, name: g.name, russian: g.russian }))
+  const data: ShikimoriGenre[] = await res.json()
+  genreCache = data.map(g => ({ id: g.id, name: g.name, russian: g.russian, kind: g.kind }))
   return genreCache
 }
 

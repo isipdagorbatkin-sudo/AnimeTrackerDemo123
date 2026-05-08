@@ -112,22 +112,8 @@ export default function AnimePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Banner */}
-      {imageUrl && !imageError && (
-        <div className="relative h-96 overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={title}
-            className="w-full h-full object-cover"
-            onError={() => setImageError(true)}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/50 to-transparent" />
-        </div>
-      )}
-
       {/* Content */}
-      <div className="container mx-auto px-4 py-8 -mt-48 relative z-10">
+      <div className="container mx-auto px-4 py-8 relative">
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left Column - Cover */}
           <div className="lg:col-span-1">
