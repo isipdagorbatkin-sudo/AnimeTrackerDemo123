@@ -33,11 +33,30 @@ export async function DELETE(
   return proxy(request, params.path)
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    },
+  })
+}
+
 async function proxy(request: NextRequest, path: string[]) {
   try {
     const target = `${SUPABASE_URL}/${path.join('/')}${request.nextUrl.search}`
-    const headers = new Headers(request.headers)
-    headers.delete('host')
+
+    const headers = new Headers()
+    headers.set('apikey', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+    const auth = request.headers.get('authorization')
+    if (auth) headers.set('authorization', auth)
+    const ct = request.headers.get('content-type')
+    if (ct) headers.set('content-type', ct)
+    const prefer = request.headers.get('prefer')
+    if (prefer) headers.set('prefer', prefer)
+    const accept = request.headers.get('accept')
+    if (accept) headers.set('accept', accept)
 
     const response = await fetch(target, {
       method: request.method,
@@ -46,20 +65,18 @@ async function proxy(request: NextRequest, path: string[]) {
       signal: AbortSignal.timeout(30000),
     })
 
-    const data = response.headers.get('content-type')?.includes('application/json')
+    const resHeaders = new Headers(response.headers)
+    resHeaders.set('Access-Control-Allow-Origin', '*')
+    resHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+    resHeaders.set('Access-Control-Allow-Headers', '*')
+
+    const body = response.headers.get('content-type')?.includes('application/json')
       ? await response.json()
       : await response.text()
 
     return new NextResponse(
-      typeof data === 'string' ? data : JSON.stringify(data),
-      {
-        status: response.status,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE',
-          'Access-Control-Allow-Headers': '*',
-        },
-      }
+      typeof body === 'string' ? body : JSON.stringify(body),
+      { status: response.status, headers: resHeaders }
     )
   } catch (err) {
     return NextResponse.json(
