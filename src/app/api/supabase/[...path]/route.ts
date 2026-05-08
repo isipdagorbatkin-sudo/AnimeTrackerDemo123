@@ -31,6 +31,8 @@ async function proxy(request: NextRequest, path: string[]) {
 
     const resHeaders: Record<string, string> = {}
     response.headers.forEach((value, key) => {
+      const lower = key.toLowerCase()
+      if (['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lower)) return
       resHeaders[key] = value
     })
     resHeaders['Access-Control-Allow-Origin'] = '*'
