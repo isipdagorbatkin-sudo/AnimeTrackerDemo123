@@ -46,13 +46,14 @@ async function fetchShikimori<T>(endpoint: string): Promise<T> {
 }
 
 function normalizeAnime(a: any): ShikimoriAnime {
+  const rawMalId = a.mal_id ?? a.myanimelist_id ?? null
   return {
     ...a,
     score: typeof a.score === 'number' ? a.score : parseFloat(a.score) || 0,
     episodes: typeof a.episodes === 'number' ? a.episodes : parseInt(a.episodes) || 0,
     episodes_aired: typeof a.episodes_aired === 'number' ? a.episodes_aired : parseInt(a.episodes_aired) || 0,
     id: typeof a.id === 'number' ? a.id : parseInt(a.id) || 0,
-    mal_id: a.mal_id != null ? (typeof a.mal_id === 'number' ? a.mal_id : parseInt(a.mal_id) || null) : null,
+    mal_id: rawMalId != null ? (typeof rawMalId === 'number' ? rawMalId : parseInt(rawMalId) || null) : null,
   }
 }
 

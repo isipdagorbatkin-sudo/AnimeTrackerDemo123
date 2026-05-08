@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { getAnimeByMalId, getStatusText, getTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,8 @@ export default function AnimePage() {
     const loadAnime = async () => {
       try {
         setLoading(true)
-        const data = await getAnimeByMalId(animeId)
+        let data = await getAnimeByMalId(animeId)
+        if (!data) data = await getAnimeById(animeId)
         setAnime(data)
       } catch (err: any) {
         console.error('Error loading anime:', err)
