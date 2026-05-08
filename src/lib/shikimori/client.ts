@@ -161,7 +161,56 @@ export function getStatusText(status: string): string {
   return map[status] || status
 }
 
-export function getTypeText(kind: string): string {
+export function getFullImageUrl(path: string): string {
+  if (!path) return ''
+  return path.startsWith('/') ? `https://shikimori.one${path}` : path
+}
+
+export interface ShikimoriScreenshot {
+  id: number
+  image: string
+}
+
+export interface ShikimoriEpisode {
+  id: number
+  number: number
+  title: string
+  aired_on: string | null
+  episodes: number
+}
+
+export async function getAnimeScreenshots(animeId: number): Promise<string[]> {
+  try {
+    const data = await fetchShikimori<any[]>(`/animes/${animeId}/screenshots`)
+    return (data || []).map((s: any) => getFullImageUrl(s.image?.original || s.image?.preview || ''))
+  } catch {
+    return []
+  }
+}
+
+export async function getAnimeEpisodes(animeId: number): Promise<ShikimoriEpisode[]> {
+  try {
+    const data = await fetchShikimori<any[]>(`/animes/${animeId}/episodes`)
+    return (data || []).map((e: any) => ({
+      id: e.id,
+      number: e.number,
+      title: e.title || `Эпизод ${e.number}`,
+      aired_on: e.aired_on || null,
+      episodes: e.episodes || 0,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function getSimilarAnime(animeId: number): Promise<ShikimoriAnime[]> {
+  try {
+    const data = await fetchShikimori<any[]>(`/animes/${animeId}/similar`)
+    return (data || []).map(normalizeAnime)
+  } catch {
+    return []
+  }
+}
   const map: Record<string, string> = {
     tv: 'ТВ',
     movie: 'Фильм',

@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScreenshots, getAnimeEpisodes, getSimilarAnime, getFullImageUrl, ShikimoriAnime, ShikimoriEpisode } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2 } from 'lucide-react'
+import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
@@ -22,6 +22,10 @@ export default function AnimePage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [screenshots, setScreenshots] = useState<string[]>([])
+  const [episodes, setEpisodes] = useState<ShikimoriEpisode[]>([])
+  const [similar, setSimilar] = useState<ShikimoriAnime[]>([])
+  const [showAllEpisodes, setShowAllEpisodes] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -36,6 +40,11 @@ export default function AnimePage() {
         let data = await getAnimeById(animeId)
         if (!data) data = await getAnimeByMalId(animeId)
         setAnime(data)
+        if (data?.id) {
+          getAnimeScreenshots(data.id).then(setScreenshots)
+          getAnimeEpisodes(data.id).then(setEpisodes)
+          getSimilarAnime(data.id).then(setSimilar)
+        }
       } catch (err: any) {
         console.error('Error loading anime:', err)
         setError('Не удалось загрузить информацию об аниме. Попробуйте позже.')
@@ -261,7 +270,81 @@ export default function AnimePage() {
                 </div>
               </div>
             )}
+
+            {/* Screenshots */}
+            {screenshots.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold mb-4">Кадры</h3>
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+                  {screenshots.map((url, i) => (
+                    <img
+                      key={i}
+                      src={getFullImageUrl(url)}
+                      alt={`Кадр ${i + 1}`}
+                      className="h-40 rounded-xl snap-start flex-shrink-0"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Episodes */}
+            {episodes.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <PlayCircle className="h-5 w-5 text-primary" />
+                  Эпизоды ({episodes.length})
+                </h3>
+                <div className="space-y-1">
+                  {(showAllEpisodes ? episodes : episodes.slice(0, 10)).map((ep) => (
+                    <div key={ep.id} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2 text-sm">
+                      <span className="text-muted-foreground">#{ep.number}</span>
+                      <span className="flex-1 ml-3">{ep.title}</span>
+                      <span className="text-muted-foreground text-xs">{ep.aired_on || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+                {episodes.length > 10 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllEpisodes(!showAllEpisodes)}
+                    className="mt-3 gap-2"
+                  >
+                    {showAllEpisodes ? 'Свернуть' : `Все ${episodes.length} эпизодов`}
+                    {showAllEpisodes ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Similar */}
+          {similar.length > 0 && (
+            <div className="lg:col-span-3 mt-8">
+              <h3 className="text-xl font-bold mb-4">Похожие</h3>
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {similar.map((a) => (
+                  <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-32 group">
+                    <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
+                      {a.image?.original ? (
+                        <img
+                          src={getFullImageUrl(a.image.original)}
+                          alt={a.russian || a.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-medium line-clamp-2">{a.russian || a.name}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
