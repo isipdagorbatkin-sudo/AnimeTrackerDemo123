@@ -166,15 +166,10 @@ export function getFullImageUrl(path: string): string {
   return path.startsWith('/') ? `https://shikimori.one${path}` : path
 }
 
-export interface ShikimoriScreenshot {
-  id: number
-  image: string
-}
-
 export async function getAnimeScreenshots(animeId: number): Promise<string[]> {
   try {
     const data = await fetchShikimori<any[]>(`/animes/${animeId}/screenshots`)
-    return (data || []).map((s: any) => getFullImageUrl(s.image?.original || s.image?.preview || ''))
+    return (data || []).map((s: any) => getFullImageUrl(s.original || s.preview || ''))
   } catch {
     return []
   }
