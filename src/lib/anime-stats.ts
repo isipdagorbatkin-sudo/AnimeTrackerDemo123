@@ -5,12 +5,13 @@ export async function getEpisodeCount(animeId: number): Promise<number> {
   if (local) return local.episodes
 
   try {
-    const res = await fetch(`https://api.jikan.moe/v4/anime/${animeId}`, {
+    const res = await fetch(`https://shikimori.one/api/animes?myanimelist_id=${animeId}`, {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
       signal: AbortSignal.timeout(10000),
     })
     const json = await res.json()
-    return json.data?.episodes ?? 0
+    const anime = Array.isArray(json) ? json[0] : null
+    return anime?.episodes ?? 0
   } catch {
     return 0
   }

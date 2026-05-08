@@ -1,13 +1,15 @@
-const SHIKIMORI_API_BASE = 'https://shikimori.one/api'
+const SHIKIMORI_BASE = '/api/shikimori'
 
 export interface ShikimoriAnime {
   id: number
+  mal_id: number | null
   name: string
   russian: string
   name_synonyms: string[]
   english: string[]
   japanese: string[]
   synopsis: string
+  description_html: string
   score: number
   kind: string
   status: string
@@ -35,85 +37,118 @@ export interface ShikimoriAnime {
   }
 }
 
-export interface ShikimoriSearchResponse {
-  [key: number]: ShikimoriAnime
+async function fetchShikimori<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${SHIKIMORI_BASE}${endpoint}`, {
+    headers: { 'Accept': 'application/json' },
+  })
+  if (!response.ok) throw new Error(`Shikimori API error: ${response.status}`)
+  return response.json()
 }
 
-export async function searchAnime(query: string, limit: number = 20): Promise<ShikimoriAnime[]> {
-  try {
-    const response = await fetch(
-      `${SHIKIMORI_API_BASE}/animes/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Shikimori API error: ${response.status}`)
-    }
-
-    const data: ShikimoriSearchResponse = await response.json()
-    console.log('Shikimori search response:', data)
-
-    // Преобразуем объект в массив
-    return Object.values(data)
-  } catch (error) {
-    console.error('Error in searchAnime:', error)
-    throw error
-  }
+export async function searchAnime(query: string, page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    search: query,
+    page: page.toString(),
+    limit: limit.toString(),
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
 }
 
 export async function getAnimeById(id: number): Promise<ShikimoriAnime | null> {
   try {
-    const response = await fetch(
-      `${SHIKIMORI_API_BASE}/animes/${id}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Shikimori API error: ${response.status}`)
-    }
-
-    const data: ShikimoriAnime = await response.json()
-    console.log('Shikimori anime by ID response:', data)
-
-    return data
-  } catch (error) {
-    console.error('Error in getAnimeById:', error)
+    return await fetchShikimori<ShikimoriAnime>(`/animes/${id}`)
+  } catch {
     return null
   }
 }
 
-export function convertToJikanFormat(anime: ShikimoriAnime): any {
-  return {
-    mal_id: anime.id,
-    title: anime.russian || anime.name,
-    title_japanese: anime.japanese[0] || null,
-    synopsis: anime.synopsis,
-    images: {
-      jpg: {
-        large_image_url: anime.image.original,
-        image_url: anime.image.preview,
-      },
-    },
-    genres: anime.genres.map((genre) => ({
-      mal_id: genre.id,
-      name: genre.russian || genre.name,
-    })),
-    score: anime.score,
-    episodes: anime.episodes,
-    status: anime.status,
-    type: anime.kind,
-    year: anime.aired_on ? new Date(anime.aired_on).getFullYear() : null,
+export async function getAnimeByMalId(malId: number): Promise<ShikimoriAnime | null> {
+  try {
+    const list = await fetchShikimori<ShikimoriAnime[]>(`/animes?myanimelist_id=${malId}`)
+    return list[0] || null
+  } catch {
+    return null
   }
+}
+
+export async function getTopAnime(page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    order: 'ranked',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export async function getAiringAnime(page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    status: 'ongoing',
+    order: 'popularity',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export async function getUpcomingAnime(page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    status: 'anons',
+    order: 'popularity',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export async function getReleasedAnime(page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    status: 'released',
+    order: 'popularity',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export async function getMovies(page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    kind: 'movie',
+    order: 'popularity',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export async function getAnimeByGenre(genreId: string, page = 1, limit = 20): Promise<ShikimoriAnime[]> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    genre: genreId,
+    order: 'popularity',
+  })
+  return fetchShikimori<ShikimoriAnime[]>(`/animes?${params}`)
+}
+
+export function getStatusText(status: string): string {
+  const map: Record<string, string> = {
+    anons: 'Анонс',
+    ongoing: 'Выходит',
+    released: 'Завершено',
+  }
+  return map[status] || status
+}
+
+export function getTypeText(kind: string): string {
+  const map: Record<string, string> = {
+    tv: 'ТВ',
+    movie: 'Фильм',
+    ova: 'OVA',
+    ona: 'ONA',
+    special: 'Спец.',
+    tv_13: 'ТВ (13+)',
+    tv_24: 'ТВ (24+)',
+    tv_48: 'ТВ (48+)',
+  }
+  return map[kind] || kind
 }

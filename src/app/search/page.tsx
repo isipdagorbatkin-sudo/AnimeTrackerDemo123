@@ -1,28 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { JikanAnimeCard } from '@/components/anime/JikanAnimeCard'
-import { JikanAnime } from '@/lib/jikan/types'
-import { searchAnime } from '@/lib/jikan/client'
+import { ShikimoriAnimeCard } from '@/components/anime/ShikimoriAnimeCard'
+import { ShikimoriAnime, searchAnime } from '@/lib/shikimori/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, Sparkles, ChevronDown, Compass } from 'lucide-react'
-import { searchLocalAnime, convertLocalToJikanArray } from '@/lib/local-anime/db'
-import { buildSearchCandidates, hasCyrillic, normalizeSearchQuery } from '@/lib/search'
 import { cn } from '@/lib/utils'
-
-function dedupeAnime(list: JikanAnime[]): JikanAnime[] {
-  const seen = new Set<number>()
-  return list.filter((anime) => {
-    if (seen.has(anime.mal_id)) return false
-    seen.add(anime.mal_id)
-    return true
-  })
-}
 
 export default function SearchPage() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<JikanAnime[]>([])
+  const [results, setResults] = useState<ShikimoriAnime[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -32,7 +20,7 @@ export default function SearchPage() {
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const searchCacheRef = useRef(new Map<string, { results: JikanAnime[]; hasMore: boolean; remoteQuery: string }>())
+  const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
 
   useEffect(() => {
@@ -44,7 +32,7 @@ export default function SearchPage() {
 
     clearTimeout(searchTimeoutRef.current)
 
-    const normalizedQuery = normalizeSearchQuery(query)
+    const normalizedQuery = query.trim()
     if (!normalizedQuery || normalizedQuery.length < 2) {
       setResults([])
       setHasMore(false)
@@ -61,57 +49,28 @@ export default function SearchPage() {
       return
     }
 
-    const localMatches = hasCyrillic(normalizedQuery)
-      ? convertLocalToJikanArray(searchLocalAnime(normalizedQuery))
-      : []
-
-    if (localMatches.length > 0) {
-      setResults(dedupeAnime(localMatches))
-    }
-
     const requestId = ++requestIdRef.current
     searchTimeoutRef.current = setTimeout(async () => {
-      let lastError: unknown = null
-      let jikanResults: JikanAnime[] = []
-      let paginationHasMore = false
-      const candidates = buildSearchCandidates(normalizedQuery)
-      let usedRemoteQuery = candidates[0] || normalizedQuery
-
       try {
         setLoading(true)
         setError('')
 
-        for (const candidate of candidates) {
-          try {
-            const data = await searchAnime(candidate, 1, 5)
-            if (requestIdRef.current !== requestId) return
-            const fetched = data.data || []
-            jikanResults = fetched
-            paginationHasMore = data.pagination?.has_next_page || false
-            usedRemoteQuery = candidate
-            if (fetched.length > 0) break
-          } catch (err) {
-            lastError = err
-          }
-        }
-
+        const fetched = await searchAnime(normalizedQuery, 1, 5)
         if (requestIdRef.current !== requestId) return
 
-        const combined = dedupeAnime([...jikanResults, ...localMatches])
-        if (combined.length === 0 && lastError) {
-          setError('Не удалось выполнить поиск. Попробуйте позже.')
-        } else {
-          setError('')
-        }
-        setResults(combined)
-        setHasMore(paginationHasMore && jikanResults.length > 0)
-        setRemoteQuery(usedRemoteQuery)
+        setResults(fetched)
+        setHasMore(fetched.length >= 5)
+        setRemoteQuery(normalizedQuery)
         setCurrentPage(1)
         searchCacheRef.current.set(cacheKey, {
-          results: combined,
-          hasMore: paginationHasMore && jikanResults.length > 0,
-          remoteQuery: usedRemoteQuery,
+          results: fetched,
+          hasMore: fetched.length >= 5,
+          remoteQuery: normalizedQuery,
         })
+      } catch (err) {
+        if (requestIdRef.current === requestId) {
+          setError('Не удалось выполнить поиск. Попробуйте позже.')
+        }
       } finally {
         if (requestIdRef.current === requestId) {
           setLoading(false)
@@ -128,13 +87,13 @@ export default function SearchPage() {
     try {
       setLoading(true)
       const nextPage = currentPage + 1
-      const effectiveQuery = remoteQuery || normalizeSearchQuery(query)
+      const effectiveQuery = remoteQuery || query.trim()
       if (!effectiveQuery) return
-      const data = await searchAnime(effectiveQuery, nextPage, 20)
-      setResults(prev => [...prev, ...(data.data || [])])
-      setHasMore(data.pagination?.has_next_page || false)
+      const fetched = await searchAnime(effectiveQuery, nextPage, 20)
+      setResults(prev => [...prev, ...fetched])
+      setHasMore(fetched.length >= 20)
       setCurrentPage(nextPage)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading more results:', err)
     } finally {
       setLoading(false)
@@ -239,11 +198,11 @@ export default function SearchPage() {
             <div className="animate-fade-in-up">
               <div className="anime-grid">
                 {results.map((anime, index) => (
-                  <div key={anime.mal_id} className={cn(
+                  <div key={anime.id} className={cn(
                     'animate-fade-in-up',
                     `stagger-${Math.min(index % 10 + 1, 10)}`
                   )}>
-                    <JikanAnimeCard anime={anime} />
+                    <ShikimoriAnimeCard anime={anime} />
                   </div>
                 ))}
               </div>

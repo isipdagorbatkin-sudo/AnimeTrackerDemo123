@@ -2,22 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { getAnimeById, JikanAnime } from '@/lib/jikan/client'
-import { getStatusText, getTypeText } from '@/lib/jikan/client'
+import { getAnimeByMalId, getStatusText, getTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, TrendingUp, Users, Clock, Loader2 } from 'lucide-react'
+import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2 } from 'lucide-react'
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
-import { translateGenres } from '@/lib/genres'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import Link from 'next/link'
 
 export default function AnimePage() {
   const params = useParams()
   const animeId = parseInt(params.id as string)
-  const [anime, setAnime] = useState<JikanAnime | null>(null)
+  const [anime, setAnime] = useState<ShikimoriAnime | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -35,7 +33,7 @@ export default function AnimePage() {
     const loadAnime = async () => {
       try {
         setLoading(true)
-        const data = await getAnimeById(animeId)
+        const data = await getAnimeByMalId(animeId)
         setAnime(data)
       } catch (err: any) {
         console.error('Error loading anime:', err)
@@ -50,18 +48,16 @@ export default function AnimePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Airing':
-        return 'bg-green-500/20 text-green-400 border-green-500/30'
-      case 'Complete':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-      case 'Upcoming':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+      case 'ongoing': return 'bg-green-500/20 text-green-400 border-green-500/30'
+      case 'released': return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+      case 'anons': return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
 
-  const title = anime?.title_english || anime?.title || 'Без названия'
+  const title = anime?.russian || anime?.name || 'Без названия'
+  const year = anime?.aired_on ? new Date(anime.aired_on).getFullYear() : null
+  const description = anime?.synopsis || anime?.description_html?.replace(/<[^>]+>/g, '')
 
   if (!mounted) {
     return (
@@ -103,7 +99,7 @@ export default function AnimePage() {
     )
   }
 
-  const imageUrl = getProxiedImageUrl(anime.images?.jpg?.large_image_url || anime.images?.webp?.large_image_url || '')
+  const imageUrl = getProxiedImageUrl(anime.image.original)
 
   return (
     <div className="min-h-screen">
@@ -168,11 +164,8 @@ export default function AnimePage() {
               <h1 className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 {title}
               </h1>
-              {anime.title_japanese && (
-                <p className="text-xl text-muted-foreground mb-2">{anime.title_japanese}</p>
-              )}
-              {anime.title_synonyms && anime.title_synonyms.length > 0 && (
-                <p className="text-sm text-muted-foreground">{anime.title_synonyms[0]}</p>
+              {anime.japanese && anime.japanese.length > 0 && (
+                <p className="text-xl text-muted-foreground mb-2">{anime.japanese[0]}</p>
               )}
             </div>
 
@@ -182,11 +175,11 @@ export default function AnimePage() {
                 {getStatusText(anime.status)}
               </Badge>
               <Badge variant="secondary">
-                {getTypeText(anime.type)}
+                {getTypeText(anime.kind)}
               </Badge>
-              {anime.year && (
+              {year && (
                 <Badge variant="outline">
-                  {anime.year}
+                  {year}
                 </Badge>
               )}
               {anime.rating && (
@@ -220,25 +213,14 @@ export default function AnimePage() {
                   </CardContent>
                 </Card>
               )}
-              {anime.year && (
+              {year && (
                 <Card className="glass hover:scale-105 transition-all duration-300">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Calendar className="h-6 w-6 text-primary" />
-                      <span className="text-3xl font-bold">{anime.year}</span>
+                      <span className="text-3xl font-bold">{year}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Год</p>
-                  </CardContent>
-                </Card>
-              )}
-              {anime.rank && (
-                <Card className="glass hover:scale-105 transition-all duration-300">
-                  <CardContent className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <TrendingUp className="h-6 w-6 text-primary" />
-                      <span className="text-3xl font-bold">#{anime.rank}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Рейтинг</p>
                   </CardContent>
                 </Card>
               )}
@@ -252,10 +234,10 @@ export default function AnimePage() {
                   Жанры
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {translateGenres(anime.genres.map(g => g.name)).map((genre, index) => (
-                    <Link key={index} href={`/genre/${encodeURIComponent(anime.genres![index].name)}`}>
+                  {anime.genres.map((genre, index) => (
+                    <Link key={index} href={`/genre/${encodeURIComponent(genre.name)}`}>
                       <Badge variant="secondary" className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer px-3 py-1.5">
-                        {genre}
+                        {genre.russian || genre.name}
                       </Badge>
                     </Link>
                   ))}
@@ -264,27 +246,14 @@ export default function AnimePage() {
             )}
 
             {/* Description */}
-            {anime.synopsis && (
+            {description && (
               <div>
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
                   Описание
                 </h3>
                 <div className="text-muted-foreground leading-relaxed text-lg">
-                  {anime.synopsis}
-                </div>
-              </div>
-            )}
-
-            {/* Background */}
-            {anime.background && (
-              <div>
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  Информация
-                </h3>
-                <div className="text-muted-foreground leading-relaxed text-lg">
-                  {anime.background}
+                  {description}
                 </div>
               </div>
             )}

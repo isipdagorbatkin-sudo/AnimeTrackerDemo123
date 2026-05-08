@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { LocalAnime, getLocalAnimeById } from '@/lib/local-anime/db'
-import { getAnimeById } from '@/lib/jikan/client'
-import { JikanAnime } from '@/lib/jikan/types'
+import { getAnimeByMalId, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Badge } from '@/components/ui/badge'
 import { Star, Calendar, PlayCircle, Loader2, Image as ImageIcon } from 'lucide-react'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
@@ -30,21 +29,21 @@ function getGradient(id: number): string {
   return gradients[id % gradients.length]
 }
 
-function convertJikanToLocal(jikan: JikanAnime): LocalAnime {
+function convertShikimoriToLocal(shiki: ShikimoriAnime): LocalAnime {
   return {
-    id: jikan.mal_id,
-    title: jikan.title_english || jikan.title,
-    titleRussian: jikan.title,
-    titleJapanese: jikan.title_japanese || '',
-    description: jikan.synopsis || '',
-    imageUrl: jikan.images?.jpg?.large_image_url || jikan.images?.jpg?.image_url || '',
-    gradient: getGradient(jikan.mal_id),
-    genres: (jikan.genres || []).map(g => g.name),
-    score: jikan.score || 0,
-    episodes: jikan.episodes || 0,
-    status: jikan.status || 'unknown',
-    type: jikan.type || 'unknown',
-    year: jikan.year || 0,
+    id: shiki.mal_id || shiki.id,
+    title: shiki.russian || shiki.name,
+    titleRussian: shiki.russian || shiki.name,
+    titleJapanese: shiki.japanese?.[0] || '',
+    description: shiki.synopsis || shiki.description_html?.replace(/<[^>]*>/g, '') || '',
+    imageUrl: shiki.image?.original || '',
+    gradient: getGradient(shiki.id),
+    genres: (shiki.genres || []).map(g => g.russian || g.name),
+    score: shiki.score || 0,
+    episodes: shiki.episodes || 0,
+    status: shiki.status || 'unknown',
+    type: shiki.kind || 'unknown',
+    year: shiki.aired_on ? new Date(shiki.aired_on).getFullYear() : 0,
   }
 }
 
@@ -68,8 +67,11 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
           return
         }
 
-        const jikanData = await getAnimeById(animeId)
-        setAnime(convertJikanToLocal(jikanData))
+        const shikiData = await getAnimeByMalId(animeId)
+        if (shikiData) {
+          setAnime(convertShikimoriToLocal(shikiData))
+          return
+        }
       } catch (err: any) {
         console.error('Error loading anime:', err)
         setError('Не удалось загрузить информацию об аниме')

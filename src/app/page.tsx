@@ -1,27 +1,25 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { JikanAnimeCard } from '@/components/anime/JikanAnimeCard'
-import { JikanAnime } from '@/lib/jikan/types'
-import { searchAnime, getTopAnime, getAiringAnime, getUpcomingAnime, getCompletedAnime, getMovies, getAnimeByGenre } from '@/lib/jikan/client'
+import { ShikimoriAnimeCard } from '@/components/anime/ShikimoriAnimeCard'
+import { ShikimoriAnime, searchAnime, getTopAnime, getAiringAnime, getUpcomingAnime, getReleasedAnime, getMovies, getAnimeByGenre } from '@/lib/shikimori/client'
+import { getShikimoriGenreId } from '@/lib/shikimori/genres'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye } from 'lucide-react'
 import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
-import { translateGenre, genreToId } from '@/lib/genres'
+import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
-import { searchLocalAnime, convertLocalToJikanArray } from '@/lib/local-anime/db'
-import { buildSearchCandidates, hasCyrillic, normalizeSearchQuery } from '@/lib/search'
 import { useRouter } from 'next/navigation'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies'
 
-function dedupeAnime(list: JikanAnime[]): JikanAnime[] {
+function dedupeAnime(list: ShikimoriAnime[]): ShikimoriAnime[] {
   const seen = new Set<number>()
   return list.filter(a => {
-    if (seen.has(a.mal_id)) return false
-    seen.add(a.mal_id)
+    if (seen.has(a.id)) return false
+    seen.add(a.id)
     return true
   })
 }
@@ -37,7 +35,7 @@ const tabConfig = [
 export default function HomePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabType>('top')
-  const [animeList, setAnimeList] = useState<JikanAnime[]>([])
+  const [animeList, setAnimeList] = useState<ShikimoriAnime[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedGenre, setSelectedGenre] = useState<string>('')
@@ -49,24 +47,24 @@ export default function HomePage() {
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const searchCacheRef = useRef(new Map<string, { results: JikanAnime[]; hasMore: boolean; remoteQuery: string }>())
+  const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
 
   const loadAnime = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
       if (!append) setLoading(true)
       setError('')
-      let data
+      let results: ShikimoriAnime[]
       switch (activeTab) {
-        case 'airing': data = await getAiringAnime(page, 20); break
-        case 'upcoming': data = await getUpcomingAnime(page, 20); break
-        case 'completed': data = await getCompletedAnime(page, 20); break
-        case 'movies': data = await getMovies(page, 20); break
-        case 'top': default: data = await getTopAnime(page, 20); break
+        case 'airing': results = await getAiringAnime(page, 20); break
+        case 'upcoming': results = await getUpcomingAnime(page, 20); break
+        case 'completed': results = await getReleasedAnime(page, 20); break
+        case 'movies': results = await getMovies(page, 20); break
+        case 'top': default: results = await getTopAnime(page, 20); break
       }
-      const newAnime = dedupeAnime(data.data || [])
+      const newAnime = dedupeAnime(results || [])
       setAnimeList(prev => append ? dedupeAnime([...prev, ...newAnime]) : newAnime)
-      setHasMore(data.pagination?.has_next_page || false)
+      setHasMore(results.length >= 20)
       setCurrentPage(page)
     } catch (err: any) {
       console.error('Error loading anime:', err)
@@ -86,9 +84,10 @@ export default function HomePage() {
       try {
         setLoading(true)
         setError('')
-        const data = await getAnimeByGenre(genreToId(selectedGenre), 1, 20)
-        setAnimeList(dedupeAnime(data.data || []))
-        setHasMore(data.pagination?.has_next_page || false)
+        const genreId = await getShikimoriGenreId(selectedGenre)
+        const results = await getAnimeByGenre(String(genreId), 1, 20)
+        setAnimeList(dedupeAnime(results || []))
+        setHasMore(results.length >= 20)
         setCurrentPage(1)
       } catch (err: any) {
         console.error('Error loading anime by genre:', err)
@@ -102,7 +101,7 @@ export default function HomePage() {
 
   useEffect(() => {
     clearTimeout(searchTimeoutRef.current)
-    const normalizedQuery = normalizeSearchQuery(searchQuery)
+    const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery || normalizedQuery.length < 2) {
       if (selectedGenre) return
       setAnimeList([])
@@ -111,7 +110,7 @@ export default function HomePage() {
       return
     }
 
-    const cacheKey = normalizedQuery.toLowerCase()
+    const cacheKey = normalizedQuery
     const cached = searchCacheRef.current.get(cacheKey)
     if (cached) {
       setAnimeList(cached.results)
@@ -121,57 +120,33 @@ export default function HomePage() {
       return
     }
 
-    const localMatches = hasCyrillic(normalizedQuery)
-      ? convertLocalToJikanArray(searchLocalAnime(normalizedQuery))
-      : []
-
-    if (localMatches.length > 0) {
-      setAnimeList(dedupeAnime(localMatches))
-    }
-
     const requestId = ++requestIdRef.current
     searchTimeoutRef.current = setTimeout(async () => {
-      let lastError: unknown = null
-      let jikanResults: JikanAnime[] = []
-      let paginationHasMore = false
-      const candidates = buildSearchCandidates(normalizedQuery)
-      let usedRemoteQuery = candidates[0] || normalizedQuery
-
       try {
         setLoading(true)
         setError('')
 
-        for (const candidate of candidates) {
-          try {
-            const data = await searchAnime(candidate, 1, 5)
-            if (requestIdRef.current !== requestId) return
-            const fetched = dedupeAnime(data.data || [])
-            jikanResults = fetched
-            paginationHasMore = data.pagination?.has_next_page || false
-            usedRemoteQuery = candidate
-            if (fetched.length > 0) break
-          } catch (err) {
-            lastError = err
-          }
-        }
+        const results = await searchAnime(normalizedQuery, 1, 5)
 
         if (requestIdRef.current !== requestId) return
 
-        const combined = dedupeAnime([...jikanResults, ...localMatches])
-        if (combined.length === 0 && lastError) {
-          setError('Не удалось выполнить поиск.')
-        } else {
-          setError('')
-        }
-        setAnimeList(combined)
-        setHasMore(paginationHasMore && jikanResults.length > 0)
-        setRemoteSearchQuery(usedRemoteQuery)
+        const deduped = dedupeAnime(results || [])
+        setAnimeList(deduped)
+        const searchHasMore = results.length >= 5
+        setHasMore(searchHasMore)
+        setRemoteSearchQuery(normalizedQuery)
         setCurrentPage(1)
+
         searchCacheRef.current.set(cacheKey, {
-          results: combined,
-          hasMore: paginationHasMore && jikanResults.length > 0,
-          remoteQuery: usedRemoteQuery,
+          results: deduped,
+          hasMore: searchHasMore,
+          remoteQuery: normalizedQuery,
         })
+      } catch (err: any) {
+        if (requestIdRef.current === requestId) {
+          console.error('Error searching anime:', err)
+          setError('Не удалось выполнить поиск.')
+        }
       } finally {
         if (requestIdRef.current === requestId) {
           setLoading(false)
@@ -186,25 +161,28 @@ export default function HomePage() {
     try {
       setLoading(true)
       const nextPage = currentPage + 1
-      let data
+      let results: ShikimoriAnime[]
       if (searchQuery) {
-        const effectiveQuery = remoteSearchQuery || normalizeSearchQuery(searchQuery)
+        const effectiveQuery = remoteSearchQuery || searchQuery.trim().toLowerCase()
         if (!effectiveQuery) return
-        data = await searchAnime(effectiveQuery, nextPage, 20)
+        results = await searchAnime(effectiveQuery, nextPage, 20)
       }
-      else if (selectedGenre) data = await getAnimeByGenre(genreToId(selectedGenre), nextPage, 20)
+      else if (selectedGenre) {
+        const genreId = await getShikimoriGenreId(selectedGenre)
+        results = await getAnimeByGenre(String(genreId), nextPage, 20)
+      }
       else {
         switch (activeTab) {
-          case 'airing': data = await getAiringAnime(nextPage, 20); break
-          case 'upcoming': data = await getUpcomingAnime(nextPage, 20); break
-          case 'completed': data = await getCompletedAnime(nextPage, 20); break
-          case 'movies': data = await getMovies(nextPage, 20); break
-          case 'top': default: data = await getTopAnime(nextPage, 20); break
+          case 'airing': results = await getAiringAnime(nextPage, 20); break
+          case 'upcoming': results = await getUpcomingAnime(nextPage, 20); break
+          case 'completed': results = await getReleasedAnime(nextPage, 20); break
+          case 'movies': results = await getMovies(nextPage, 20); break
+          case 'top': default: results = await getTopAnime(nextPage, 20); break
         }
       }
-      const newAnime = dedupeAnime(data.data || [])
+      const newAnime = dedupeAnime(results || [])
       setAnimeList(prev => dedupeAnime([...prev, ...newAnime]))
-      setHasMore(data.pagination?.has_next_page || false)
+      setHasMore(results.length >= 20)
       setCurrentPage(nextPage)
     } catch (err: any) {
       console.error('Error loading more anime:', err)
@@ -380,7 +358,7 @@ export default function HomePage() {
               <div>
                 <div className="anime-grid">
                   {animeList.map((anime) => (
-                    <JikanAnimeCard key={anime.mal_id} anime={anime} />
+                    <ShikimoriAnimeCard key={anime.id} anime={anime} />
                   ))}
                 </div>
 
