@@ -70,9 +70,9 @@ export function JikanAnimeCard({ anime }: JikanAnimeCardProps) {
 
             {/* Status badge */}
             {anime.status && (
-              <div className="absolute top-2.5 left-2.5">
-                <span className="inline-flex items-center gap-1 bg-black/70 px-2 py-0.5 rounded-full text-[0.55rem] font-medium text-white/90">
-                  <Clock className="h-2.5 w-2.5" />
+              <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90">
+                  <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   {getStatusText(anime.status)}
                 </span>
               </div>
@@ -80,12 +80,12 @@ export function JikanAnimeCard({ anime }: JikanAnimeCardProps) {
 
             {/* Score badge */}
             {anime.score && (
-              <div className="absolute top-2.5 right-2.5">
+              <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5">
                 <span className={cn(
-                  'inline-flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-md text-[0.6rem] font-bold',
+                  'inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1 sm:px-1.5 py-0.5 rounded-md text-[0.5rem] sm:text-[0.6rem] font-bold',
                   getScoreColor(anime.score)
                 )}>
-                  <Star className="h-2.5 w-2.5 fill-current" />
+                  <Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-current" />
                   {anime.score.toFixed(1)}
                 </span>
               </div>
@@ -94,29 +94,29 @@ export function JikanAnimeCard({ anime }: JikanAnimeCardProps) {
         </Link>
 
         {/* Content */}
-        <div className="p-3.5 space-y-2">
+        <div className="p-2.5 sm:p-3.5 space-y-1.5 sm:space-y-2">
           {/* Title */}
           <Link href={`/anime/${anime.mal_id}`}>
-            <h3 className="text-sm font-semibold leading-snug line-clamp-2 transition-colors duration-150 group-hover:text-primary">
+            <h3 className="text-[0.65rem] sm:text-sm font-semibold leading-snug line-clamp-2 transition-colors duration-150 group-hover:text-primary">
               {title}
             </h3>
           </Link>
 
           {/* Meta */}
-          <div className="flex items-center gap-2 text-[0.65rem] text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-2 text-[0.55rem] sm:text-[0.65rem] text-muted-foreground flex-wrap">
             {anime.type && (
               <span className="px-1.5 py-0.5 rounded bg-muted/70 font-medium">
                 {getTypeText(anime.type)}
               </span>
             )}
             {anime.episodes && (
-              <span className="flex items-center gap-1">
+              <span className="hidden sm:flex items-center gap-1">
                 <PlayCircle className="h-3 w-3" />
                 {anime.episodes} эп.
               </span>
             )}
             {anime.year && (
-              <span className="flex items-center gap-1">
+              <span className="hidden sm:flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {anime.year}
               </span>
@@ -128,13 +128,13 @@ export function JikanAnimeCard({ anime }: JikanAnimeCardProps) {
             <div className="flex flex-wrap gap-1">
               {anime.genres.slice(0, 2).map((genre) => (
                 <Link key={genre.mal_id} href={`/genre/${encodeURIComponent(genre.name)}`}>
-                  <span className="text-[0.55rem] font-medium px-1.5 py-0.5 rounded-full bg-muted/70 text-muted-foreground/70 hover:text-primary transition-colors duration-150">
+                  <span className="text-[0.45rem] sm:text-[0.55rem] font-medium px-1 sm:px-1.5 py-0.5 rounded-full bg-muted/70 text-muted-foreground/70 hover:text-primary transition-colors duration-150">
                     {translateGenre(genre.name)}
                   </span>
                 </Link>
               ))}
               {(anime.genres.length - 2) > 0 && (
-                <span className="text-[0.55rem] text-muted-foreground/50">
+                <span className="text-[0.5rem] text-muted-foreground/50">
                   +{anime.genres.length - 2}
                 </span>
               )}
@@ -142,28 +142,29 @@ export function JikanAnimeCard({ anime }: JikanAnimeCardProps) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-1.5 pt-1">
+          <div className="flex gap-1 sm:gap-1.5 pt-1">
             <Button
               size="sm"
-              className="flex-1 h-7 gap-1 text-[0.65rem] shadow-[0_10px_30px_rgba(168,85,247,0.25)]"
+              className="flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 text-[0.55rem] sm:text-[0.65rem] shadow-[0_10px_30px_rgba(168,85,247,0.25)]"
               onClick={(e) => {
                 e.preventDefault()
                 setIsAddDialogOpen(true)
               }}
             >
-              <Plus className="h-3 w-3" />
-              В коллекцию
+              <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="hidden sm:inline">В коллекцию</span>
+              <span className="sm:hidden">+</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 w-7 !p-0 border-primary/20 hover:border-primary/40"
+              className="h-6 w-6 sm:h-7 sm:w-7 !p-0 border-primary/20 hover:border-primary/40"
               onClick={(e) => {
                 e.preventDefault()
                 setIsShareDialogOpen(true)
               }}
             >
-              <Share2 className="h-3 w-3" />
+              <Share2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </Button>
           </div>
         </div>

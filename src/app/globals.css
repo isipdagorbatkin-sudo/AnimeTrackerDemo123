@@ -232,28 +232,28 @@ body::before {
 /* ─── Anime Card Grid ─── */
 .anime-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 420px) {
   .anime-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
   }
 }
 
 @media (min-width: 640px) {
   .anime-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
   }
 }
 
 @media (min-width: 1024px) {
   .anime-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
   }
 }
 
@@ -511,7 +511,7 @@ body::before {
 
 /* ─── Page transition ─── */
 .page-enter {
-  animation: fade-in-up 0.45s ease forwards;
+  animation: fade-in-up 0.15s ease forwards;
 }
 
 /* ─── Empty state ─── */
