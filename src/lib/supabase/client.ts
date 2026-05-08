@@ -11,9 +11,14 @@ function installFetchProxy() {
     const url = req.url
     if (url.startsWith(SUPA_URL)) {
       const proxyUrl = url.replace(SUPA_URL, `${window.location.origin}/api/supabase`)
-      const proxyReq = new Request(proxyUrl, req)
-      proxyReq.headers.set('origin', window.location.origin)
-      return orig(proxyReq, { redirect: 'manual' })
+      const headers = new Headers(req.headers)
+      headers.set('origin', window.location.origin)
+      const proxyReq = new Request(proxyUrl, {
+        method: req.method,
+        headers,
+        body: req.method !== 'GET' && req.method !== 'HEAD' ? await req.clone().text() : undefined,
+      })
+      return orig(proxyReq)
     }
     return orig(input, init)
   }

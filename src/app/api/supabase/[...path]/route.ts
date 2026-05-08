@@ -20,7 +20,7 @@ async function proxy(request: NextRequest, path: string[]) {
     const accept = request.headers.get('accept') || 'application/json'
     headers['accept'] = accept
 
-    const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text()
+    const body = ['GET', 'HEAD'].includes(request.method) ? undefined : (await request.text()) || undefined
 
     const response = await fetch(target, {
       method: request.method,
@@ -38,6 +38,10 @@ async function proxy(request: NextRequest, path: string[]) {
     resHeaders['Access-Control-Allow-Origin'] = '*'
     resHeaders['Access-Control-Allow-Headers'] = '*'
 
+    if (response.status === 204) {
+      return new NextResponse(null, { status: 204, headers: resHeaders })
+    }
+
     const data = await response.text()
 
     return new NextResponse(data, {
@@ -45,7 +49,7 @@ async function proxy(request: NextRequest, path: string[]) {
       headers: resHeaders,
     })
   } catch (err) {
-    return new NextResponse(JSON.stringify({ message: 'Proxy error' }), {
+    return new NextResponse(JSON.stringify({ message: 'Proxy error', details: String(err) }), {
       status: 502,
       headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
