@@ -8,7 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, Sparkles, ChevronDown, Compass } from 'lucide-react'
 import { searchLocalAnime, convertLocalToJikanArray } from '@/lib/local-anime/db'
+import { buildSearchCandidates, hasCyrillic, normalizeSearchQuery } from '@/lib/search'
 import { cn } from '@/lib/utils'
+
+function dedupeAnime(list: JikanAnime[]): JikanAnime[] {
+  const seen = new Set<number>()
+  return list.filter((anime) => {
+    if (seen.has(anime.mal_id)) return false
+    seen.add(anime.mal_id)
+    return true
+  })
+}
 
 export default function SearchPage() {
   const [query, setQuery] = useState('')
@@ -18,9 +28,12 @@ export default function SearchPage() {
   const [mounted, setMounted] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [remoteQuery, setRemoteQuery] = useState('')
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const searchCacheRef = useRef(new Map<string, { results: JikanAnime[]; hasMore: boolean; remoteQuery: string }>())
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     setMounted(true)
@@ -31,37 +44,78 @@ export default function SearchPage() {
 
     clearTimeout(searchTimeoutRef.current)
 
-    if (!query.trim() || query.length < 2) {
+    const normalizedQuery = normalizeSearchQuery(query)
+    if (!normalizedQuery || normalizedQuery.length < 2) {
       setResults([])
       setHasMore(false)
+      setRemoteQuery('')
       return
     }
 
+    const cacheKey = normalizedQuery.toLowerCase()
+    const cached = searchCacheRef.current.get(cacheKey)
+    if (cached) {
+      setResults(cached.results)
+      setHasMore(cached.hasMore)
+      setRemoteQuery(cached.remoteQuery)
+      return
+    }
+
+    const localMatches = hasCyrillic(normalizedQuery)
+      ? convertLocalToJikanArray(searchLocalAnime(normalizedQuery))
+      : []
+
+    if (localMatches.length > 0) {
+      setResults(dedupeAnime(localMatches))
+    }
+
+    const requestId = ++requestIdRef.current
     searchTimeoutRef.current = setTimeout(async () => {
+      let lastError: unknown = null
+      let jikanResults: JikanAnime[] = []
+      let paginationHasMore = false
+      const candidates = buildSearchCandidates(normalizedQuery)
+      let usedRemoteQuery = candidates[0] || normalizedQuery
+
       try {
         setLoading(true)
         setError('')
 
-        const data = await searchAnime(query, 1, 5)
-        const jikanResults = data.data || []
-
-        let combined = [...jikanResults]
-        const hasCyrillic = /[а-яё]/i.test(query)
-        if (hasCyrillic && combined.length === 0) {
-          const local = searchLocalAnime(query)
-          if (local.length > 0) {
-            combined = convertLocalToJikanArray(local)
+        for (const candidate of candidates) {
+          try {
+            const data = await searchAnime(candidate, 1, 5)
+            if (requestIdRef.current !== requestId) return
+            const fetched = data.data || []
+            jikanResults = fetched
+            paginationHasMore = data.pagination?.has_next_page || false
+            usedRemoteQuery = candidate
+            if (fetched.length > 0) break
+          } catch (err) {
+            lastError = err
           }
         }
 
+        if (requestIdRef.current !== requestId) return
+
+        const combined = dedupeAnime([...jikanResults, ...localMatches])
+        if (combined.length === 0 && lastError) {
+          setError('Не удалось выполнить поиск. Попробуйте позже.')
+        } else {
+          setError('')
+        }
         setResults(combined)
-        setHasMore(data.pagination?.has_next_page || false)
+        setHasMore(paginationHasMore && jikanResults.length > 0)
+        setRemoteQuery(usedRemoteQuery)
         setCurrentPage(1)
-      } catch (err: any) {
-        console.error('Search error:', err)
-        setError('Не удалось выполнить поиск. Попробуйте позже.')
+        searchCacheRef.current.set(cacheKey, {
+          results: combined,
+          hasMore: paginationHasMore && jikanResults.length > 0,
+          remoteQuery: usedRemoteQuery,
+        })
       } finally {
-        setLoading(false)
+        if (requestIdRef.current === requestId) {
+          setLoading(false)
+        }
       }
     }, 300)
 
@@ -74,7 +128,9 @@ export default function SearchPage() {
     try {
       setLoading(true)
       const nextPage = currentPage + 1
-      const data = await searchAnime(query, nextPage, 20)
+      const effectiveQuery = remoteQuery || normalizeSearchQuery(query)
+      if (!effectiveQuery) return
+      const data = await searchAnime(effectiveQuery, nextPage, 20)
       setResults(prev => [...prev, ...(data.data || [])])
       setHasMore(data.pagination?.has_next_page || false)
       setCurrentPage(nextPage)
@@ -83,7 +139,7 @@ export default function SearchPage() {
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, currentPage, query])
+  }, [loading, hasMore, currentPage, query, remoteQuery])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -119,10 +175,10 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen">
       {/* Cinematic Search Header */}
-      <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-14 sm:pt-18 pb-10">
+      <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-[450px] h-[450px] bg-purple-500/8 rounded-full blur-3xl animate-aurora" />
-          <div className="absolute -bottom-40 -left-40 w-[350px] h-[350px] bg-blue-500/5 rounded-full blur-3xl animate-aurora" style={{ animationDelay: '-10s' }} />
+          <div className="absolute -top-40 -right-40 w-[450px] h-[450px] bg-purple-500/8 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-[350px] h-[350px] bg-blue-500/5 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto">
@@ -133,7 +189,7 @@ export default function SearchPage() {
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 Поиск{' '}
-                <span className="text-gradient">аниме</span>
+                <span className="text-primary">аниме</span>
               </h1>
             </div>
             <p className="text-foreground-secondary text-base max-w-xl mx-auto">
@@ -146,7 +202,7 @@ export default function SearchPage() {
       {/* Search Input */}
       <section className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-3xl mx-auto">
-          <div className="glass-card rounded-2xl p-4 sm:p-5 mb-10 animate-fade-in-up stagger-2">
+          <div className="bg-card border border-border rounded-xl p-4 sm:p-5 mb-10">
             <div className="flex gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-muted-foreground/50" />
@@ -156,7 +212,7 @@ export default function SearchPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   disabled={loading}
-                  className="pl-11 h-11 bg-white/[0.015] border-border/30 focus-visible:bg-white/[0.03] text-base"
+                  className="pl-11 h-11 bg-background border-border text-base"
                 />
               </div>
             </div>

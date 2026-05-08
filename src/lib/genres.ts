@@ -1,3 +1,37 @@
+// Маппинг названий жанров в MAL ID (Jikan API требует числовые ID)
+export const GENRE_IDS: Record<string, number> = {
+  'Action': 1, 'Adventure': 2, 'Cars': 3, 'Comedy': 4, 'Dementia': 5,
+  'Demons': 6, 'Mystery': 7, 'Drama': 8, 'Ecchi': 9, 'Fantasy': 10,
+  'Game': 11, 'Hentai': 12, 'Historical': 13, 'Horror': 14, 'Kids': 15,
+  'Magic': 16, 'Martial Arts': 17, 'Mecha': 18, 'Music': 19, 'Parody': 20,
+  'Samurai': 21, 'Romance': 22, 'School': 23, 'Sci-Fi': 24, 'Shoujo': 25,
+  'Shounen': 26, 'Space': 27, 'Sports': 28, 'Super Power': 29, 'Vampire': 30,
+  'Yaoi': 31, 'Yuri': 32, 'Harem': 33, 'Slice of Life': 34, 'Supernatural': 35,
+  'Military': 36, 'Police': 37, 'Psychological': 38, 'Thriller': 39,
+  'Seinen': 40, 'Josei': 41, 'Award Winning': 46, 'Gourmet': 47,
+  'Workplace': 48, 'Erotica': 49, 'Isekai': 50, 'Gag Humor': 52,
+  'Time Travel': 53, 'Reverse Harem': 54, 'Love Polygon': 55,
+  'Villainess': 56, 'Reincarnation': 57, 'Showbiz': 58,
+  'Anthropomorphic': 59, 'Team Sports': 60, 'Delinquents': 61,
+  'Visual Arts': 62, 'Strategy Game': 63, 'Childcare': 64,
+  'Crossdressing': 65, 'Video Game': 66, 'High Stakes Games': 67,
+  'CGDCT': 68, 'Otaku Culture': 69, 'Urban Fantasy': 70, 'Idols': 71,
+  'Wuxia': 72, 'Xianxia': 73, 'Iyashikei': 74, 'Fantasy World': 75,
+  'Chibi': 76, 'Mahou Shoujo': 77, 'Mahou Shounen': 78, 'Adult Cast': 79,
+  'Child Protagonist': 80, 'Organized Crime': 81, 'Racing': 82,
+  'Medical': 83, 'Cooking': 85, 'Survival': 87, 'Zombies': 88,
+  'Aliens': 89, 'Robots': 90, 'Cyberpunk': 91, 'Steampunk': 92,
+  'Post-Apocalyptic': 93, 'Tragedy': 94, 'Detective': 95,
+  'Educational': 96, 'Family': 97, 'Performing Arts': 98,
+  'Tournament': 100, 'Boys Love': 101, 'Girls Love': 102,
+  'Suspense': 103, 'Ninja': 104, 'Vampire': 105,
+  'Workplace': 106, 'Traditional Games': 107,
+}
+
+export function genreToId(name: string): string {
+  return String(GENRE_IDS[name] || 0)
+}
+
 // Перевод жанров с английского на русский
 export const GENRE_TRANSLATIONS: Record<string, string> = {
   'Action': 'Экшен',

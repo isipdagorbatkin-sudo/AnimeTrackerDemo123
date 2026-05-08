@@ -6,7 +6,7 @@ import { JikanAnimeCard } from '@/components/anime/JikanAnimeCard'
 import { JikanAnime } from '@/lib/jikan/types'
 import { getAnimeByGenre } from '@/lib/jikan/client'
 import { Loader2, ArrowLeft, Filter } from 'lucide-react'
-import { translateGenre } from '@/lib/genres'
+import { translateGenre, genreToId } from '@/lib/genres'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -32,7 +32,7 @@ export default function GenrePage() {
         setLoading(true)
         setError('')
 
-        const data = await getAnimeByGenre(genre, 1, 20)
+        const data = await getAnimeByGenre(genreToId(genre), 1, 20)
         setAnimeList(data.data || [])
         setHasMore(data.pagination?.has_next_page || false)
         setCurrentPage(1)
@@ -53,7 +53,7 @@ export default function GenrePage() {
     try {
       setLoading(true)
       const nextPage = currentPage + 1
-      const data = await getAnimeByGenre(genre, nextPage, 20)
+      const data = await getAnimeByGenre(genreToId(genre), nextPage, 20)
       setAnimeList(prev => [...prev, ...(data.data || [])])
       setHasMore(data.pagination?.has_next_page || false)
       setCurrentPage(nextPage)
@@ -78,7 +78,7 @@ export default function GenrePage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <section className="relative overflow-hidden py-20 px-4">
+      <section className="relative overflow-hidden py-12 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
@@ -161,7 +161,7 @@ export default function GenrePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8 px-4 bg-input backdrop-blur-xl">
+      <footer className="border-t py-8 px-4 bg-muted">
         <div className="container mx-auto text-center text-muted-foreground">
           <p>© 2024 AnimeTracker. Все права защищены.</p>
         </div>

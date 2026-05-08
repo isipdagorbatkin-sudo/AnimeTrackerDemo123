@@ -17,6 +17,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
@@ -26,8 +27,12 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (!mounted) return
-    loadChat()
-    subscribeToMessages()
+
+    const init = async () => {
+      await loadChat()
+      await subscribeToMessages()
+    }
+    init()
 
     return () => {
       supabase.channel('messages').unsubscribe()
@@ -46,6 +51,8 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
         router.push('/login')
         return
       }
+
+      setCurrentUserId(user.id)
 
       const { data: friendData } = await supabase
         .from('profiles')
@@ -81,8 +88,8 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const subscribeToMessages = () => {
-    const { data: { user } } = supabase.auth.getUserSync()
+  const subscribeToMessages = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
 
     supabase
       .channel('messages')
@@ -171,8 +178,6 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
     )
   }
 
-  const { data: { user: currentUser } } = supabase.auth.getUserSync()
-
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -211,7 +216,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
                 </div>
               ) : (
                 messages.map((message) => {
-                  const isOwn = message.sender_id === currentUser?.id
+                  const isOwn = message.sender_id === currentUserId
                   return (
                     <div
                       key={message.id}

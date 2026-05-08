@@ -12,7 +12,7 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-4 overflow-hidden rounded-2xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/5 backdrop-blur-sm transition-all duration-300 hover:ring-purple-500/20 hover:shadow-lg hover:shadow-purple-500/5 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
+        "group/card flex flex-col gap-4 overflow-hidden rounded-2xl bg-card/80 text-sm text-card-foreground border border-border/70 backdrop-blur-sm shadow-[0_12px_40px_rgba(8,8,20,0.35)] transition-all duration-200 hover:border-primary/30 hover:shadow-[0_20px_60px_rgba(168,85,247,0.15)] has-data-[slot=card-footer]:pb-0 data-[size=sm]:gap-3 data-[size=sm]:py-3",
         className
       )}
       {...props}
@@ -25,7 +25,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1.5 rounded-t-2xl px-5 group-data-[size=sm]/card:px-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
+        "group/card-header grid auto-rows-min items-start gap-1.5 rounded-t-xl px-5 pt-5 group-data-[size=sm]/card:px-4 group-data-[size=sm]/card:pt-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4",
         className
       )}
       {...props}
@@ -84,7 +84,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-2xl border-t border-border/50 bg-muted/30 p-4 group-data-[size=sm]/card:p-3",
+        "flex items-center rounded-b-xl border-t border-border/50 bg-muted/30 p-4 group-data-[size=sm]/card:p-3",
         className
       )}
       {...props}

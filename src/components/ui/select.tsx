@@ -40,6 +40,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
+      type="button"
       className={cn(
         "flex w-fit items-center justify-between gap-1.5 rounded-xl border border-border/40 bg-white/[0.02] py-2 pr-2 pl-3 text-sm whitespace-nowrap transition-all outline-none select-none focus-visible:border-purple-500/40 focus-visible:ring-3 focus-visible:ring-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
@@ -71,27 +72,25 @@ function SelectContent({
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
   return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner
-        side={side}
-        sideOffset={sideOffset}
-        align={align}
-        alignOffset={alignOffset}
-        alignItemWithTrigger={alignItemWithTrigger}
-        className="isolate z-[100]"
+    <SelectPrimitive.Positioner
+      side={side}
+      sideOffset={sideOffset}
+      align={align}
+      alignOffset={alignOffset}
+      alignItemWithTrigger={alignItemWithTrigger}
+      className="isolate z-[100]"
+    >
+      <SelectPrimitive.Popup
+        data-slot="select-content"
+        data-align-trigger={alignItemWithTrigger}
+        className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-sidebar/95 backdrop-blur-2xl text-popover-foreground shadow-2xl shadow-black/40 ring-1 ring-border duration-150 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+        {...props}
       >
-        <SelectPrimitive.Popup
-          data-slot="select-content"
-          data-align-trigger={alignItemWithTrigger}
-          className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-sidebar/95 backdrop-blur-2xl text-popover-foreground shadow-2xl shadow-black/40 ring-1 ring-border duration-150 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
-          {...props}
-        >
-          <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
-          <SelectScrollDownButton />
-        </SelectPrimitive.Popup>
-      </SelectPrimitive.Positioner>
-    </SelectPrimitive.Portal>
+        <SelectScrollUpButton />
+        <SelectPrimitive.List>{children}</SelectPrimitive.List>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Popup>
+    </SelectPrimitive.Positioner>
   )
 }
 

@@ -1,6 +1,6 @@
 import { JikanAnime, JikanSearchResponse, JikanErrorResponse } from './types'
 
-const JIKAN_API_BASE = 'https://api.jikan.moe/v4'
+const JIKAN_API_BASE = '/api/jikan/v4'
 
 export class JikanError extends Error {
   constructor(message: string, public status?: number) {
@@ -11,9 +11,7 @@ export class JikanError extends Error {
 
 async function fetchJikan<T>(endpoint: string): Promise<T> {
   try {
-    const response = await fetch(`${JIKAN_API_BASE}${endpoint}`, {
-      next: { revalidate: 3600 }, // Кешируем на 1 час
-    })
+    const response = await fetch(`${JIKAN_API_BASE}${endpoint}`)
 
     if (!response.ok) {
       const error: JikanErrorResponse = await response.json()
@@ -47,7 +45,8 @@ export async function searchAnime(query: string, page = 1, limit = 20): Promise<
 }
 
 export async function getAnimeById(id: number): Promise<JikanAnime> {
-  return fetchJikan<JikanAnime>(`/anime/${id}/full`)
+  const response = await fetchJikan<{ data: JikanAnime }>(`/anime/${id}/full`)
+  return response.data
 }
 
 export async function getTopAnime(page = 1, limit = 20): Promise<JikanSearchResponse> {

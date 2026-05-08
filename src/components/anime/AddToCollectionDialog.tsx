@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { StatusSelector } from './StatusSelector'
 import { Star, Loader2, BookmarkPlus } from 'lucide-react'
 
 interface AddToCollectionDialogProps {
@@ -76,38 +76,8 @@ export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle }: 
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="status" className="text-sm font-medium">Статус</Label>
-            <Select value={status} onValueChange={(value: any) => setStatus(value)}>
-              <SelectTrigger className="w-full border-border/40 bg-white/[0.02]">
-                <SelectValue placeholder="Выберите статус" />
-              </SelectTrigger>
-              <SelectContent className="border-border/40">
-                <SelectItem value="watching">
-                  <span className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Смотрю
-                  </span>
-                </SelectItem>
-                <SelectItem value="completed">
-                  <span className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                    Просмотрено
-                  </span>
-                </SelectItem>
-                <SelectItem value="plan_to_watch">
-                  <span className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                    В планах
-                  </span>
-                </SelectItem>
-                <SelectItem value="dropped">
-                  <span className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                    Брошено
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-sm font-medium">Статус</Label>
+            <StatusSelector value={status} onChange={setStatus} />
           </div>
 
           <div className="space-y-2">

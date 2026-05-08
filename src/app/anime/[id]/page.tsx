@@ -11,6 +11,7 @@ import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, TrendingU
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
 import { translateGenres } from '@/lib/genres'
+import { getProxiedImageUrl } from '@/lib/image-proxy'
 import Link from 'next/link'
 
 export default function AnimePage() {
@@ -102,7 +103,7 @@ export default function AnimePage() {
     )
   }
 
-  const imageUrl = anime.images?.jpg?.large_image_url || anime.images?.webp?.large_image_url || ''
+  const imageUrl = getProxiedImageUrl(anime.images?.jpg?.large_image_url || anime.images?.webp?.large_image_url || '')
 
   return (
     <div className="min-h-screen">

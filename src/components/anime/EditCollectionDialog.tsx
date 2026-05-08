@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { StatusSelector } from './StatusSelector'
 
 type AnimeCollection = Database['public']['Tables']['anime_collection']['Row']
 
@@ -71,18 +71,8 @@ export function EditCollectionDialog({ item, onClose, onUpdate }: EditCollection
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="status">Статус</Label>
-            <Select value={status} onValueChange={(value: any) => setStatus(value)}>
-              <SelectTrigger className="bg-input border">
-                <SelectValue placeholder="Выберите статус" />
-              </SelectTrigger>
-              <SelectContent className="bg-input border">
-                <SelectItem value="watching">Смотрю</SelectItem>
-                <SelectItem value="completed">Просмотрено</SelectItem>
-                <SelectItem value="plan_to_watch">В планах</SelectItem>
-                <SelectItem value="dropped">Брошено</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Статус</Label>
+            <StatusSelector value={status} onChange={setStatus} />
           </div>
 
           <div className="space-y-2">

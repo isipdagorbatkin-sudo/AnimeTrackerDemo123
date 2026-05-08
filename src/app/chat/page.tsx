@@ -16,6 +16,16 @@ interface ChatPreview {
   unreadCount: number
 }
 
+type FriendshipRow = {
+  friend_id: string
+  friend: { id: string; username: string; avatar_url: string | null }
+}
+
+type MessageRow = {
+  content: string
+  created_at: string
+}
+
 export default function ChatPage() {
   const router = useRouter()
   const [chats, setChats] = useState<ChatPreview[]>([])
@@ -41,26 +51,34 @@ export default function ChatPage() {
         return
       }
 
-      const { data: friendships } = await supabase
-        .from('friendships')
-        .select('*, friend:profiles!friendships_friend_id_fkey(*)')
-        .eq('user_id', user.id)
-        .eq('status', 'accepted')
+      const [{ data: friendshipsAsUser }, { data: friendshipsAsFriend }] = await Promise.all([
+        supabase.from('friendships').select('*, friend:profiles!friendships_friend_id_fkey(*)').eq('user_id', user.id).eq('status', 'accepted'),
+        supabase.from('friendships').select('*, user:profiles!friendships_user_id_fkey(*)').eq('friend_id', user.id).eq('status', 'accepted'),
+      ])
 
-      if (!friendships || friendships.length === 0) {
+      const allFriendships = [
+        ...(friendshipsAsUser || []).map(f => ({ friend_id: f.friend_id, friend: f.friend })),
+        ...(friendshipsAsFriend || []).map(f => ({ friend_id: f.user_id, friend: f.user })),
+      ] as FriendshipRow[]
+
+      const acceptedFriendships = allFriendships
+
+      if (acceptedFriendships.length === 0) {
         setChats([])
         setLoading(false)
         return
       }
 
       const chatPreviews: ChatPreview[] = await Promise.all(
-        friendships.map(async (friendship) => {
+        acceptedFriendships.map(async (friendship) => {
           const { data: messages } = await supabase
             .from('messages')
             .select('*')
             .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friendship.friend_id}),and(sender_id.eq.${friendship.friend_id},receiver_id.eq.${user.id})`)
             .order('created_at', { ascending: false })
             .limit(1)
+
+          const recentMessages = (messages ?? []) as MessageRow[]
 
           const { count: unreadCount } = await supabase
             .from('messages')
@@ -72,8 +90,8 @@ export default function ChatPage() {
           return {
             friendId: friendship.friend_id,
             friend: friendship.friend,
-            lastMessage: messages && messages.length > 0 ? messages[0].content : undefined,
-            lastMessageTime: messages && messages.length > 0 ? messages[0].created_at : undefined,
+            lastMessage: recentMessages.length > 0 ? recentMessages[0].content : undefined,
+            lastMessageTime: recentMessages.length > 0 ? recentMessages[0].created_at : undefined,
             unreadCount: unreadCount || 0,
           }
         })
@@ -137,7 +155,7 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative overflow-hidden py-20 px-4">
+      <section className="relative overflow-hidden py-12 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto text-center relative z-10">

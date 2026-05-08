@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Filter, X, Sparkles } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Filter, X, Search } from 'lucide-react'
 import { translateGenre } from '@/lib/genres'
 
 const JIKAN_GENRES = [
@@ -33,6 +34,22 @@ interface GenreFilterDialogProps {
 }
 
 export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelect }: GenreFilterDialogProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    if (isOpen) setSearchQuery('')
+  }, [isOpen])
+
+  const filteredGenres = useMemo(() => {
+    if (!searchQuery.trim()) return JIKAN_GENRES
+    const q = searchQuery.toLowerCase().trim()
+    return JIKAN_GENRES.filter(genre => {
+      const ru = translateGenre(genre).toLowerCase()
+      const en = genre.toLowerCase()
+      return ru.includes(q) || en.includes(q)
+    })
+  }, [searchQuery])
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -46,8 +63,21 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
           </DialogDescription>
         </DialogHeader>
 
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Поиск жанров... (например: Романтика)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-10 bg-background/60 border-border/70 text-sm"
+          />
+        </div>
+
         <div className="flex flex-wrap gap-2 py-2">
-          {JIKAN_GENRES.map((genre) => {
+          {filteredGenres.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Жанры не найдены</p>
+          ) : filteredGenres.map((genre) => {
             const isActive = selectedGenre === genre
             return (
               <Badge
@@ -73,7 +103,7 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
           <div className="flex items-center justify-between pt-4 border-t border-border/40">
             <span className="text-sm text-muted-foreground/70">
               Выбран:{' '}
-              <span className="text-foreground font-semibold text-gradient-primary">
+              <span className="text-foreground font-semibold text-primary">
                 {translateGenre(selectedGenre)}
               </span>
             </span>

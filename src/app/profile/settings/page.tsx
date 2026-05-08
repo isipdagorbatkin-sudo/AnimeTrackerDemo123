@@ -98,7 +98,7 @@ export default function ProfileSettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative overflow-hidden py-20 px-4">
+      <section className="relative overflow-hidden py-12 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto text-center relative z-10">
