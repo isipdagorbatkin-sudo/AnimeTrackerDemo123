@@ -1,6 +1,7 @@
 const BLOCKED_DOMAINS = [
   'myanimelist.net',
   'cdn.myanimelist.net',
+  'shikimori.one',
 ]
 
 export function getProxiedImageUrl(url: string): string {
