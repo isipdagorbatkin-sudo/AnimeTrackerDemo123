@@ -27,7 +27,8 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
 
   const title = anime.russian || anime.name
   const rawImageUrl = anime.image?.original || ''
-  const imageUrl = rawImageUrl ? `/api/proxy-image?url=${encodeURIComponent(rawImageUrl)}` : ''
+  const fullImageUrl = rawImageUrl.startsWith('/') ? `https://shikimori.one${rawImageUrl}` : rawImageUrl
+  const imageUrl = fullImageUrl ? `/api/proxy-image?url=${encodeURIComponent(fullImageUrl)}` : ''
 
   const statusMap: Record<string, string> = {
     anons: 'Анонс',

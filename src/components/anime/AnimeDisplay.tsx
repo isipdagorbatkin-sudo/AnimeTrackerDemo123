@@ -30,13 +30,14 @@ function getGradient(id: number): string {
 }
 
 function convertShikimoriToLocal(shiki: ShikimoriAnime): LocalAnime {
+  const img = shiki.image?.original || ''
   return {
     id: shiki.mal_id || shiki.id,
     title: shiki.russian || shiki.name,
     titleRussian: shiki.russian || shiki.name,
     titleJapanese: shiki.japanese?.[0] || '',
     description: shiki.synopsis || shiki.description_html?.replace(/<[^>]*>/g, '') || '',
-    imageUrl: shiki.image?.original || '',
+    imageUrl: img.startsWith('/') ? `https://shikimori.one${img}` : img,
     gradient: getGradient(shiki.id),
     genres: (shiki.genres || []).map(g => g.russian || g.name),
     score: shiki.score || 0,

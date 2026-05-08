@@ -99,7 +99,9 @@ export default function AnimePage() {
     )
   }
 
-  const imageUrl = getProxiedImageUrl(anime.image.original)
+  const rawImage = anime.image.original || ''
+  const fullImage = rawImage.startsWith('/') ? `https://shikimori.one${rawImage}` : rawImage
+  const imageUrl = getProxiedImageUrl(fullImage)
 
   return (
     <div className="min-h-screen">
