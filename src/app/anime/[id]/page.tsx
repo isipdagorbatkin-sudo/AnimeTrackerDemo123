@@ -133,8 +133,8 @@ export default function AnimePage() {
       <div className="container mx-auto px-4 py-8 -mt-48 relative z-10">
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left Column - Cover */}
-          <div className="lg:col-span-1">
-            <Card className="overflow-hidden glass">
+          <div className="lg:col-span-1 flex justify-center">
+            <Card className="overflow-hidden glass w-fit">
               {!imageError && imageUrl ? (
                 <img
                   src={imageUrl}
@@ -148,20 +148,23 @@ export default function AnimePage() {
                   <ImageIcon className="h-24 w-24 text-muted-foreground" />
                 </div>
               )}
-              <CardContent className="p-6 space-y-4">
-                <div className="flex gap-3">
+              <CardContent className="p-3 space-y-3">
+                <div className="flex gap-2">
                   <Button
-                    className="flex-1"
+                    size="sm"
+                    className="flex-1 h-9"
                     onClick={() => setIsAddDialogOpen(true)}
                   >
-                    <Plus className="mr-2 h-5 w-5" />
+                    <Plus className="mr-2 h-4 w-4" />
                     В коллекцию
                   </Button>
                   <Button
+                    size="sm"
                     variant="outline"
+                    className="h-9"
                     onClick={() => setIsShareDialogOpen(true)}
                   >
-                    <Share2 className="h-5 w-5" />
+                    <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

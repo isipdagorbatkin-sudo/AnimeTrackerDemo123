@@ -211,6 +211,7 @@ export async function getSimilarAnime(animeId: number): Promise<ShikimoriAnime[]
     return []
   }
 }
+export function getTypeText(kind: string): string {
   const map: Record<string, string> = {
     tv: 'ТВ',
     movie: 'Фильм',
