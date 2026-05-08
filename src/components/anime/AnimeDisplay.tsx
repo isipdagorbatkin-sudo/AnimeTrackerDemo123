@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { LocalAnime, getLocalAnimeById } from '@/lib/local-anime/db'
-import { getAnimeByMalId, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getAnimeByMalId, getAnimeById, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Badge } from '@/components/ui/badge'
 import { Star, Calendar, PlayCircle, Loader2, Image as ImageIcon } from 'lucide-react'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
@@ -68,7 +68,10 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
           return
         }
 
-        const shikiData = await getAnimeByMalId(animeId)
+        let shikiData = await getAnimeById(animeId)
+        if (!shikiData) {
+          shikiData = await getAnimeByMalId(animeId)
+        }
         if (shikiData) {
           setAnime(convertShikimoriToLocal(shikiData))
           return

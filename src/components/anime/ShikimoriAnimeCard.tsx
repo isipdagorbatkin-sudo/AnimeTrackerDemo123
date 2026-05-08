@@ -36,7 +36,7 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
     released: 'Завершено',
   }
   const urlId = anime.id
-  const collectionId = anime.mal_id || anime.id
+  const collectionId = anime.id
 
   return (
     <>
