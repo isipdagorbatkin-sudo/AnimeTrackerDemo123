@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { BookOpen, Users, MessageSquare, TrendingUp, Sparkles, Flame } from 'lucide-react'
+import { BookOpen, Users, MessageSquare, TrendingUp, Sparkles, Flame, Clock, Film } from 'lucide-react'
 import { AnimeDisplayServer } from '@/components/anime/AnimeDisplayServer'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getEpisodeCount, formatTime } from '@/lib/anime-stats'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -55,6 +56,19 @@ export default async function DashboardPage() {
     supabase.from('messages').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).is('read_at', null),
   ])
   const friendsCount = (friendsAsUserCount || 0) + (friendsAsFriendCount || 0)
+
+  const { data: completedIds } = await supabase
+    .from('anime_collection')
+    .select('anime_id')
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+
+  let totalEpisodes = 0
+  if (completedIds) {
+    const counts = await Promise.all(completedIds.map(a => getEpisodeCount(a.anime_id)))
+    totalEpisodes = counts.reduce((s, c) => s + c, 0)
+  }
+  const totalMinutes = totalEpisodes * 24
 
   const stats = [
     {
@@ -137,6 +151,43 @@ export default async function DashboardPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Watch Stats */}
+      <section className="px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Film className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold tracking-tight">Просмотры</h2>
+              <p className="text-sm text-foreground-secondary/60">Статистика по просмотренным аниме</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground-secondary">Всего эпизодов</span>
+                <div className="p-2 rounded-lg bg-muted text-indigo-400">
+                  <Film className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold tracking-tight">{totalEpisodes}</div>
+              <p className="text-xs text-foreground-secondary/60 mt-1">Просмотрено в аниме со статусом «Просмотрено»</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground-secondary">Потрачено времени</span>
+                <div className="p-2 rounded-lg bg-muted text-amber-400">
+                  <Clock className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold tracking-tight">{formatTime(totalMinutes)}</div>
+              <p className="text-xs text-foreground-secondary/60 mt-1">Из расчёта 24 мин на эпизод</p>
+            </div>
           </div>
         </div>
       </section>
