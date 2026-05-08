@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScreenshots, getAnimeEpisodes, getSimilarAnime, getFullImageUrl, ShikimoriAnime, ShikimoriEpisode } from '@/lib/shikimori/client'
+import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScreenshots, getSimilarAnime, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2 } from 'lucide-react'
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
@@ -23,9 +23,7 @@ export default function AnimePage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [screenshots, setScreenshots] = useState<string[]>([])
-  const [episodes, setEpisodes] = useState<ShikimoriEpisode[]>([])
   const [similar, setSimilar] = useState<ShikimoriAnime[]>([])
-  const [showAllEpisodes, setShowAllEpisodes] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -42,7 +40,6 @@ export default function AnimePage() {
         setAnime(data)
         if (data?.id) {
           getAnimeScreenshots(data.id).then(setScreenshots)
-          getAnimeEpisodes(data.id).then(setEpisodes)
           getSimilarAnime(data.id).then(setSimilar)
         }
       } catch (err: any) {
@@ -133,21 +130,23 @@ export default function AnimePage() {
       <div className="container mx-auto px-4 py-8 -mt-48 relative z-10">
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left Column - Cover */}
-          <div className="lg:col-span-1 flex justify-center">
-            <Card className="overflow-hidden glass w-fit">
-              {!imageError && imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={title}
-                  className="w-full max-w-[250px] mx-auto aspect-[2/3] object-scale-down"
-                  style={{ objectFit: 'scale-down' }}
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <div className="w-full max-w-[250px] mx-auto aspect-[2/3] bg-gradient-to-br from-primary/50 to-primary/30 flex items-center justify-center">
-                  <ImageIcon className="h-24 w-24 text-muted-foreground" />
-                </div>
-              )}
+          <div className="lg:col-span-1">
+            <Card className="overflow-hidden glass">
+              <div className="mx-auto max-w-[250px]">
+                {!imageError && imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={title}
+                    className="w-full aspect-[2/3] object-scale-down"
+                    style={{ objectFit: 'scale-down' }}
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="w-full aspect-[2/3] bg-gradient-to-br from-primary/50 to-primary/30 flex items-center justify-center">
+                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
               <CardContent className="p-3 space-y-3">
                 <div className="flex gap-2">
                   <Button
@@ -282,7 +281,7 @@ export default function AnimePage() {
                   {screenshots.map((url, i) => (
                     <img
                       key={i}
-                      src={getFullImageUrl(url)}
+                      src={getProxiedImageUrl(url)}
                       alt={`Кадр ${i + 1}`}
                       className="h-40 rounded-xl snap-start flex-shrink-0"
                     />
@@ -291,35 +290,6 @@ export default function AnimePage() {
               </div>
             )}
 
-            {/* Episodes */}
-            {episodes.length > 0 && (
-              <div>
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <PlayCircle className="h-5 w-5 text-primary" />
-                  Эпизоды ({episodes.length})
-                </h3>
-                <div className="space-y-1">
-                  {(showAllEpisodes ? episodes : episodes.slice(0, 10)).map((ep) => (
-                    <div key={ep.id} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2 text-sm">
-                      <span className="text-muted-foreground">#{ep.number}</span>
-                      <span className="flex-1 ml-3">{ep.title}</span>
-                      <span className="text-muted-foreground text-xs">{ep.aired_on || '—'}</span>
-                    </div>
-                  ))}
-                </div>
-                {episodes.length > 10 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAllEpisodes(!showAllEpisodes)}
-                    className="mt-3 gap-2"
-                  >
-                    {showAllEpisodes ? 'Свернуть' : `Все ${episodes.length} эпизодов`}
-                    {showAllEpisodes ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Similar */}
@@ -332,7 +302,7 @@ export default function AnimePage() {
                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
                       {a.image?.original ? (
                         <img
-                          src={getFullImageUrl(a.image.original)}
+                          src={getProxiedImageUrl(getFullImageUrl(a.image.original))}
                           alt={a.russian || a.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />

@@ -171,33 +171,10 @@ export interface ShikimoriScreenshot {
   image: string
 }
 
-export interface ShikimoriEpisode {
-  id: number
-  number: number
-  title: string
-  aired_on: string | null
-  episodes: number
-}
-
 export async function getAnimeScreenshots(animeId: number): Promise<string[]> {
   try {
     const data = await fetchShikimori<any[]>(`/animes/${animeId}/screenshots`)
     return (data || []).map((s: any) => getFullImageUrl(s.image?.original || s.image?.preview || ''))
-  } catch {
-    return []
-  }
-}
-
-export async function getAnimeEpisodes(animeId: number): Promise<ShikimoriEpisode[]> {
-  try {
-    const data = await fetchShikimori<any[]>(`/animes/${animeId}/episodes`)
-    return (data || []).map((e: any) => ({
-      id: e.id,
-      number: e.number,
-      title: e.title || `Эпизод ${e.number}`,
-      aired_on: e.aired_on || null,
-      episodes: e.episodes || 0,
-    }))
   } catch {
     return []
   }
