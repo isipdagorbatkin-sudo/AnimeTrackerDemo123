@@ -117,7 +117,7 @@ export default function SearchPage() {
           setLoading(false)
         }
       }
-    }, 300)
+    }, 1200)
 
     return () => clearTimeout(searchTimeoutRef.current)
   }, [query, mounted])

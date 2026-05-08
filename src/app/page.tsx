@@ -177,7 +177,7 @@ export default function HomePage() {
           setLoading(false)
         }
       }
-    }, 300)
+    }, 1200)
     return () => clearTimeout(searchTimeoutRef.current)
   }, [searchQuery, selectedGenre])
 

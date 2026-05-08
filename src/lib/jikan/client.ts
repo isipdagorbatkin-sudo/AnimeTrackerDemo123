@@ -1,6 +1,6 @@
 import { JikanAnime, JikanSearchResponse, JikanErrorResponse } from './types'
 
-const JIKAN_API_BASE = '/api/jikan/v4'
+const JIKAN_API_BASE = '/api/jikan'
 
 export class JikanError extends Error {
   constructor(message: string, public status?: number) {
