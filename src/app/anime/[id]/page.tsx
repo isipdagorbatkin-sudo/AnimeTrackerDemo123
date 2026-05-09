@@ -111,10 +111,9 @@ export default function AnimePage() {
   const imageUrl = getProxiedImageUrl(fullImage)
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      {/* Content */}
-      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl overflow-x-hidden">
-        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 max-w-full">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden">
+      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl">
+        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
           {/* Left Column - Cover */}
           <div className="lg:col-span-1">
             <Card className="overflow-hidden glass">
@@ -157,7 +156,7 @@ export default function AnimePage() {
           </div>
 
           {/* Right Column - Info */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 min-w-0">
             <div>
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 inline-block">
                 ← Вернуться на главную
@@ -166,7 +165,7 @@ export default function AnimePage() {
                 {title}
               </h1>
               {anime.japanese && anime.japanese.length > 0 && (
-                <p className="text-xl text-muted-foreground mb-2">{anime.japanese[0]}</p>
+                <p className="text-xl text-muted-foreground mb-2 break-words">{anime.japanese[0]}</p>
               )}
             </div>
 
@@ -261,15 +260,15 @@ export default function AnimePage() {
 
             {/* Screenshots */}
             {screenshots.length > 0 && (
-              <div>
+              <div className="w-full overflow-hidden">
                 <h3 className="text-xl font-bold mb-4">Кадры</h3>
-                <div className="flex gap-3 overflow-x-auto pb-2 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {screenshots.map((url, i) => (
                     <img
                       key={i}
                       src={getProxiedImageUrl(url)}
                       alt={`Кадр ${i + 1}`}
-                      className="h-28 sm:h-36 md:h-40 w-auto max-w-[90vw] rounded-xl snap-start flex-shrink-0"
+                      className="h-24 sm:h-32 md:h-36 rounded-xl snap-start flex-shrink-0"
                     />
                   ))}
                 </div>
@@ -280,11 +279,11 @@ export default function AnimePage() {
 
           {/* Similar */}
           {similar.length > 0 && (
-            <div className="lg:col-span-3 mt-8">
+            <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
               <h3 className="text-xl font-bold mb-4">Похожие</h3>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {similar.map((a) => (
-                  <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 md:w-32 group">
+                  <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 group">
                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
                       {a.image?.original ? (
                         <img
