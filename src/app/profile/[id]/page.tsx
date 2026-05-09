@@ -31,6 +31,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [sendingComment, setSendingComment] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [showNewPlaylist, setShowNewPlaylist] = useState(false)
   const [newPlaylistName, setNewPlaylistName] = useState('')
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
@@ -62,6 +63,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       }
 
       setProfile(profileData)
+      setCurrentUserId(currentUser?.id || null)
       setIsCurrentUser(currentUser?.id === params.id)
 
       if (profileData.favorite_anime_id) {
@@ -171,9 +173,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         .select('*, author:author_id(id, username, avatar_url)')
         .single()
 
-      if (error) throw error
+      if (error || !data) throw error || new Error('Нет данных')
 
-      setComments(prev => [data, ...prev])
+      if (Array.isArray(data)) {
+        setComments(prev => [...data, ...prev])
+      } else {
+        setComments(prev => [data, ...prev])
+      }
       setNewComment('')
     } catch (error) {
       console.error('Ошибка при отправке комментария:', error)
@@ -240,7 +246,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     }
   }
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name || typeof name !== 'string') return '?'
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
@@ -290,15 +297,15 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       {profile.background_url && (
-        <div className="absolute top-0 left-0 right-0 h-48 md:h-64 overflow-hidden -z-10">
+        <div className="fixed inset-0 -z-10 overflow-hidden">
           <img
             src={getProxiedImageUrl(profile.background_url)}
             alt=""
-            className="w-full h-full object-cover opacity-30"
+            className="w-full h-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
         </div>
       )}
 
@@ -405,7 +412,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         </div>
       </section>
 
-      <section className="px-4 pb-16">
+      <section className="px-4 pb-16 pt-8">
         <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-6">
@@ -447,7 +454,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   </p>
                 </div>
               ) : (
-                <CollectionList items={collection} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+                <CollectionList items={safeCollection} getStatusText={getStatusText} getStatusColor={getStatusColor} />
               )}
             </TabsContent>
 
@@ -528,51 +535,31 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             </TabsContent>
 
             <TabsContent value="comments">
-              {isCurrentUser ? (
-                <div className="flex gap-3 mb-6">
-                  <Avatar className="h-9 w-9 shrink-0">
+              <div className="flex gap-3 mb-6 items-end">
+                {isCurrentUser && (
+                  <Avatar className="h-9 w-9 shrink-0 mb-1">
                     <AvatarImage src={profile.avatar_url || undefined} />
                     <AvatarFallback className="text-xs">{getInitials(profile.username)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 flex gap-2">
-                    <Textarea
-                      placeholder="Напишите что-нибудь о себе..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      disabled={sendingComment}
-                      className="bg-input border min-h-[60px] flex-1"
-                    />
-                    <Button
-                      size="icon"
-                      onClick={handleSendComment}
-                      disabled={sendingComment || !newComment.trim()}
-                      className="shrink-0 self-end"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
+                )}
+                <div className="flex-1 flex gap-2">
+                  <Textarea
+                    placeholder={isCurrentUser ? 'Напишите что-нибудь о себе...' : 'Напишите комментарий...'}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    disabled={sendingComment}
+                    className="bg-input border min-h-[60px] flex-1"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSendComment}
+                    disabled={sendingComment || !newComment.trim()}
+                    className="shrink-0 self-end"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : (
-                <div className="flex gap-3 mb-6">
-                  <div className="flex-1 flex gap-2">
-                    <Textarea
-                      placeholder="Напишите комментарий..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      disabled={sendingComment}
-                      className="bg-input border min-h-[60px] flex-1"
-                    />
-                    <Button
-                      size="icon"
-                      onClick={handleSendComment}
-                      disabled={sendingComment || !newComment.trim()}
-                      className="shrink-0 self-end"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {safeComments.length === 0 ? (
                 <div className="text-center py-20">
@@ -602,7 +589,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                               <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{comment.content}</p>
                             </div>
                           </div>
-                          {(isCurrentUser || comment.author_id === profile.id) && (
+                          {(isCurrentUser || comment.author_id === currentUserId) && (
                             <Button
                               variant="ghost"
                               size="icon"
