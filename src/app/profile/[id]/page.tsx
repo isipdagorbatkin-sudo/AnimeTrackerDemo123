@@ -238,9 +238,19 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {profile.background_url && (
+        <div className="fixed inset-0 -z-10 overflow-hidden">
+          <img
+            src={getProxiedImageUrl(profile.background_url)}
+            alt=""
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
+        </div>
+      )}
 
-      <section className="relative overflow-hidden py-16 px-4 bg-background">
+      <section className="relative overflow-hidden py-16 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
@@ -248,7 +258,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             <ArrowLeft className="h-4 w-4 mr-2" /> Назад
           </Button>
 
-          <Card className="bg-card border shadow-xl">
+          <Card className="glass">
             {profile.banner_url && (
               <div className="relative h-48 sm:h-64 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
                 <img
@@ -326,18 +336,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         </div>
       </section>
 
-      <section className="px-4 pb-16 mt-12 relative">
-        {profile.background_url && (
-          <div className="absolute inset-0 overflow-hidden">
-            <img
-              src={getProxiedImageUrl(profile.background_url)}
-              alt=""
-              className="w-full h-full object-cover opacity-20"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
-          </div>
-        )}
-        <div className="container mx-auto max-w-4xl relative z-10">
+      <section className="px-4 pb-16 mt-12">
+        <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-8">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
