@@ -199,16 +199,19 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Назад к чатам
           </Button>
-          <div className="flex items-center gap-3 sm:gap-4">
+          <button
+            onClick={() => router.push(`/profile/${params.id}`)}
+            className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity text-left"
+          >
             <Avatar className="h-10 w-10 sm:h-14 sm:w-14">
               <AvatarImage src={friend.avatar_url || undefined} />
               <AvatarFallback className="text-sm sm:text-lg">{getInitials(friend.username)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-2xl font-bold truncate">{friend.username}</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Онлайн</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Профиль →</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <Card className="glass overflow-hidden">

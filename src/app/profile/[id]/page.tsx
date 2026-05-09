@@ -497,15 +497,22 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 min-w-0">
-                            <Avatar className="h-8 w-8 shrink-0">
-                              <AvatarImage src={comment.author?.avatar_url || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {comment.author ? getInitials(comment.author.username) : '?'}
-                              </AvatarFallback>
-                            </Avatar>
+                            <button onClick={() => router.push(`/profile/${comment.author_id}`)}>
+                              <Avatar className="h-8 w-8 shrink-0">
+                                <AvatarImage src={comment.author?.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {comment.author ? getInitials(comment.author.username) : '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            </button>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-medium">{comment.author?.username || 'Неизвестно'}</span>
+                                <button
+                                  onClick={() => router.push(`/profile/${comment.author_id}`)}
+                                  className="text-sm font-medium hover:text-primary transition-colors text-left"
+                                >
+                                  {comment.author?.username || 'Неизвестно'}
+                                </button>
                                 <span className="text-xs text-muted-foreground">
                                   {new Date(comment.created_at).toLocaleDateString('ru-RU')}
                                 </span>

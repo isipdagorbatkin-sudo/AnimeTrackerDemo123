@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
-import { MessageSquare, Loader2, Sparkles, Search } from 'lucide-react'
+import { MessageSquare, Loader2, Sparkles, Search, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface ChatPreview {
@@ -175,27 +175,33 @@ export default function ChatPage() {
               ) : (
                 <div className="grid gap-3">
                   {chats.map((chat) => (
-                    <Card
-                      key={chat.userId}
-                      className="glass cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                      onClick={() => router.push(`/chat/${chat.userId}`)}
-                    >
+                    <Card key={chat.userId} className="glass">
                       <CardContent className="py-4">
                         <div className="flex items-center gap-4">
                           <div className="relative">
-                            <Avatar>
-                              <AvatarImage src={chat.user.avatar_url || undefined} />
-                              <AvatarFallback>{getInitials(chat.user.username)}</AvatarFallback>
-                            </Avatar>
+                            <button onClick={() => router.push(`/profile/${chat.userId}`)}>
+                              <Avatar>
+                                <AvatarImage src={chat.user.avatar_url || undefined} />
+                                <AvatarFallback>{getInitials(chat.user.username)}</AvatarFallback>
+                              </Avatar>
+                            </button>
                             {chat.unreadCount > 0 && (
                               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
                                 {chat.unreadCount}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => router.push(`/chat/${chat.userId}`)}
+                          >
                             <div className="flex items-center justify-between mb-1">
-                              <p className="font-medium truncate">{chat.user.username}</p>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); router.push(`/profile/${chat.userId}`) }}
+                                className="font-medium truncate hover:text-primary transition-colors text-left"
+                              >
+                                {chat.user.username}
+                              </button>
                               {chat.lastMessageTime && (
                                 <span className="text-xs text-muted-foreground ml-2">
                                   {formatTime(chat.lastMessageTime)}
@@ -237,24 +243,42 @@ export default function ChatPage() {
               ) : (
                 <div className="grid gap-3">
                   {filteredUsers.map((profile) => (
-                    <Card
-                      key={profile.id}
-                      className="glass cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                      onClick={() => router.push(`/chat/${profile.id}`)}
-                    >
+                    <Card key={profile.id} className="glass">
                       <CardContent className="py-4">
-                        <div className="flex items-center gap-4">
-                          <Avatar>
-                            <AvatarImage src={profile.avatar_url || undefined} />
-                            <AvatarFallback>{getInitials(profile.username)}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{profile.username}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
-                            </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <Avatar>
+                              <AvatarImage src={profile.avatar_url || undefined} />
+                              <AvatarFallback>{getInitials(profile.username)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <button
+                                onClick={() => router.push(`/profile/${profile.id}`)}
+                                className="font-medium truncate hover:text-primary transition-colors text-left"
+                              >
+                                {profile.username}
+                              </button>
+                              <p className="text-sm text-muted-foreground">
+                                Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
+                              </p>
+                            </div>
                           </div>
-                          <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0" />
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => router.push(`/profile/${profile.id}`)}
+                              className="p-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors"
+                              title="Профиль"
+                            >
+                              <User className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => router.push(`/chat/${profile.id}`)}
+                              className="p-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors"
+                              title="Написать"
+                            >
+                              <MessageSquare className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
