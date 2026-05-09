@@ -104,23 +104,23 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Не авторизован')
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profile_comments')
         .insert({
           profile_id: params.id,
           author_id: user.id,
           content: newComment.trim(),
         })
+
+      if (error) throw error
+
+      const { data: updated } = await supabase
+        .from('profile_comments')
         .select('*, author:author_id(id, username, avatar_url)')
-        .single()
+        .eq('profile_id', params.id)
+        .order('created_at', { ascending: false })
 
-      if (error || !data) throw error || new Error('Нет данных')
-
-      if (Array.isArray(data)) {
-        setComments(prev => [...data, ...prev])
-      } else {
-        setComments(prev => [data, ...prev])
-      }
+      setComments(updated || [])
       setNewComment('')
     } catch (error) {
       console.error('Ошибка при отправке комментария:', error)
@@ -336,10 +336,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         </div>
       </section>
 
-      <section className="px-4 pb-16 pt-8">
+      <section className="px-4 pb-16 mt-12">
         <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
-            <TabsList className="bg-input border h-auto flex-wrap mb-6">
+            <TabsList className="bg-input border h-auto flex-wrap mb-8">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Коллекция ({safeCollection.length})
               </TabsTrigger>

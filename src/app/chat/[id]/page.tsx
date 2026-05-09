@@ -125,21 +125,29 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
     e.preventDefault()
     if (!newMessage.trim() || sending) return
 
+    const content = newMessage.trim()
     setSending(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
-
       if (!user) throw new Error('Вы не авторизованы')
 
       const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: params.id,
-        content: newMessage.trim(),
+        content,
       })
 
       if (error) throw error
 
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        sender_id: user.id,
+        receiver_id: params.id,
+        content,
+        created_at: new Date().toISOString(),
+        read_at: null,
+      }])
       setNewMessage('')
     } catch (error) {
       console.error('Ошибка при отправке сообщения:', error)
@@ -148,7 +156,8 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name || typeof name !== 'string') return '?'
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
