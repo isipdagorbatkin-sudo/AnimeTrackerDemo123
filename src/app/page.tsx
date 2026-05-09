@@ -47,6 +47,8 @@ export default function HomePage() {
   const [remoteSearchQuery, setRemoteSearchQuery] = useState('')
   const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set())
 
+  const genreLoaderRef = useRef<() => Promise<void>>()
+
   const refreshCollection = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -126,6 +128,7 @@ export default function HomePage() {
         setLoading(false)
       }
     }
+    genreLoaderRef.current = loadAnimeByGenre
     loadAnimeByGenre()
   }, [selectedGenre])
 
@@ -133,8 +136,11 @@ export default function HomePage() {
     clearTimeout(searchTimeoutRef.current)
     const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery || normalizedQuery.length < 2) {
-      if (selectedGenre) return
-      if (normalizedQuery.length === 0 && !selectedGenre) {
+      if (selectedGenre) {
+        genreLoaderRef.current?.()
+        return
+      }
+      if (normalizedQuery.length === 0) {
         loadAnimeRef.current(1, false)
         return
       }

@@ -269,10 +269,11 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     )
   }
 
-  const watchingItems = collection.filter(i => i.status === 'watching')
-  const completedItems = collection.filter(i => i.status === 'completed')
-  const droppedItems = collection.filter(i => i.status === 'dropped')
-  const planItems = collection.filter(i => i.status === 'plan_to_watch')
+  const safeCollection = Array.isArray(collection) ? collection : []
+  const watchingItems = safeCollection.filter(i => i.status === 'watching')
+  const completedItems = safeCollection.filter(i => i.status === 'completed')
+  const droppedItems = safeCollection.filter(i => i.status === 'dropped')
+  const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
 
   return (
     <div className="min-h-screen">
@@ -395,7 +396,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-6">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
-                Коллекция ({collection.length})
+                Коллекция ({safeCollection.length})
               </TabsTrigger>
               <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Смотрю ({watchingItems.length})
@@ -423,7 +424,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             </TabsList>
 
             <TabsContent value="collection">
-              {collection.length === 0 ? (
+              {safeCollection.length === 0 ? (
                 <div className="text-center py-20">
                   <p className="text-muted-foreground text-lg">
                     {isCurrentUser
@@ -613,15 +614,15 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2">
                     {[
-                      { label: 'Всего аниме', value: collection.length },
+                      { label: 'Всего аниме', value: safeCollection.length },
                       { label: 'Смотрю сейчас', value: watchingItems.length },
                       { label: 'Просмотрено', value: completedItems.length },
                       { label: 'В планах', value: planItems.length },
                       { label: 'Брошено', value: droppedItems.length },
                       {
                         label: 'Средняя оценка',
-                        value: collection.filter(i => i.rating).length > 0
-                          ? Math.round(collection.reduce((sum, i) => sum + (i.rating || 0), 0) / collection.filter(i => i.rating).length)
+                        value: safeCollection.filter(i => i.rating).length > 0
+                          ? Math.round(safeCollection.reduce((sum, i) => sum + (i.rating || 0), 0) / safeCollection.filter(i => i.rating).length)
                           : '-',
                       },
                       { label: 'Плейлистов', value: playlists.length },
@@ -655,14 +656,16 @@ function CollectionList({
   const [animeCache, setAnimeCache] = useState<Record<number, ShikimoriAnime | null>>({})
 
   useEffect(() => {
-    items.forEach(item => {
-      if (!animeCache[item.anime_id]) {
-        getAnimeById(item.anime_id).then(data => {
-          setAnimeCache(prev => ({ ...prev, [item.anime_id]: data }))
+    if (!Array.isArray(items)) return
+    const ids = items.map(i => i.anime_id)
+    ids.forEach(id => {
+      if (!animeCache[id]) {
+        getAnimeById(id).then(data => {
+          setAnimeCache(prev => ({ ...prev, [id]: data }))
         })
       }
     })
-  }, [items])
+  }, [items.length])
 
   if (items.length === 0) {
     return (
