@@ -180,24 +180,24 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-6">
+      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-4xl">
+        <div className="mb-4 sm:mb-6">
           <Button
             variant="ghost"
             onClick={() => router.push('/chat')}
-            className="mb-4"
+            className="mb-3 sm:mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Назад к чатам
           </Button>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Avatar className="h-10 w-10 sm:h-14 sm:w-14">
               <AvatarImage src={friend.avatar_url || undefined} />
-              <AvatarFallback className="text-lg">{getInitials(friend.username)}</AvatarFallback>
+              <AvatarFallback className="text-sm sm:text-lg">{getInitials(friend.username)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-2xl font-bold">{friend.username}</h1>
-              <p className="text-sm text-muted-foreground">Онлайн</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">{friend.username}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Онлайн</p>
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
           <CardContent className="p-0">
             <div
               ref={scrollRef}
-              className="h-[calc(100vh-350px)] overflow-y-auto p-6 space-y-4"
+              className="h-[calc(100vh-300px)] sm:h-[calc(100vh-350px)] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4"
             >
               {messages.length === 0 ? (
                 <div className="text-center py-12">
@@ -240,22 +240,22 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <div className="border-t p-4">
-              <form onSubmit={handleSendMessage} className="flex gap-3">
+            <div className="border-t p-3 sm:p-4">
+              <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3">
                 <Input
                   type="text"
                   placeholder="Напишите сообщение..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   disabled={sending}
-                  className="bg-input border h-12 text-base"
+                  className="bg-input border h-10 sm:h-12 text-sm sm:text-base"
                 />
                 <Button
                   type="submit"
                   disabled={sending || !newMessage.trim()}
-                  className="h-12 px-6"
+                  className="h-10 sm:h-12 px-4 sm:px-6"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </form>
             </div>

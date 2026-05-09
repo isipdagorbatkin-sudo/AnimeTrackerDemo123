@@ -161,44 +161,44 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
           <Card className="glass">
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={profile.avatar_url || undefined} />
-                    <AvatarFallback className="text-2xl">{getInitials(profile.username)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{profile.username}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
-                    </CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0 sm:justify-between">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                      <AvatarImage src={profile.avatar_url || undefined} />
+                      <AvatarFallback className="text-xl sm:text-2xl">{getInitials(profile.username)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <CardTitle className="text-xl sm:text-2xl break-words">{profile.username}</CardTitle>
+                      <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+                        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {isCurrentUser ? (
-                    <Button variant="outline" onClick={() => router.push('/profile/settings')}>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/profile/settings')}>
                       <User className="h-4 w-4 mr-2" /> Настройки
                     </Button>
                   ) : friendship?.status === 'accepted' ? (
                     <>
-                      <Button variant="outline" onClick={() => router.push(`/chat/${params.id}`)}>
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/chat/${params.id}`)}>
                         <MessageSquare className="h-4 w-4 mr-2" /> Написать
                       </Button>
-                      <Button variant="outline">
+                      <Button variant="outline" size="sm">
                         <Share2 className="h-4 w-4 mr-2" /> Поделиться
                       </Button>
                     </>
                   ) : friendship?.status === 'pending' ? (
                     friendship.user_id === params.id ? (
-                      <Button onClick={handleAcceptFriendRequest}>
+                      <Button size="sm" onClick={handleAcceptFriendRequest}>
                         Принять заявку
                       </Button>
                     ) : (
                       <Badge variant="secondary">Заявка отправлена</Badge>
                     )
                   ) : (
-                    <Button onClick={handleSendFriendRequest}>
+                    <Button size="sm" onClick={handleSendFriendRequest}>
                       <UserPlus className="h-4 w-4 mr-2" /> Добавить в друзья
                     </Button>
                   )}

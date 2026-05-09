@@ -111,14 +111,14 @@ export default function AnimePage() {
   const imageUrl = getProxiedImageUrl(fullImage)
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Content */}
-      <div className="container mx-auto px-4 py-8 relative">
-        <div className="grid gap-8 lg:grid-cols-3">
+      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl">
+        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 max-w-full">
           {/* Left Column - Cover */}
           <div className="lg:col-span-1">
             <Card className="overflow-hidden glass">
-              <div className="mx-auto max-w-[250px]">
+              <div className="mx-auto max-w-[200px] sm:max-w-[250px]">
                 {!imageError && imageUrl ? (
                   <img
                     src={imageUrl}
@@ -162,7 +162,7 @@ export default function AnimePage() {
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 inline-block">
                 ← Вернуться на главную
               </Link>
-              <h1 className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent break-words">
                 {title}
               </h1>
               {anime.japanese && anime.japanese.length > 0 && (
@@ -191,7 +191,7 @@ export default function AnimePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {anime.score && (
                 <Card className="glass hover:scale-105 transition-all duration-300">
                   <CardContent className="p-4 text-center">
@@ -253,7 +253,7 @@ export default function AnimePage() {
                   <Clock className="h-5 w-5 text-primary" />
                   Описание
                 </h3>
-                <div className="text-muted-foreground leading-relaxed text-lg">
+                <div className="text-muted-foreground leading-relaxed text-sm sm:text-base md:text-lg break-words">
                   {description}
                 </div>
               </div>
@@ -269,7 +269,7 @@ export default function AnimePage() {
                       key={i}
                       src={getProxiedImageUrl(url)}
                       alt={`Кадр ${i + 1}`}
-                      className="h-40 rounded-xl snap-start flex-shrink-0"
+                      className="h-28 sm:h-36 md:h-40 w-auto max-w-[90vw] rounded-xl snap-start flex-shrink-0"
                     />
                   ))}
                 </div>
@@ -282,9 +282,9 @@ export default function AnimePage() {
           {similar.length > 0 && (
             <div className="lg:col-span-3 mt-8">
               <h3 className="text-xl font-bold mb-4">Похожие</h3>
-              <div className="flex gap-4 overflow-x-auto pb-2">
+              <div className="flex gap-3 overflow-x-auto pb-2">
                 {similar.map((a) => (
-                  <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-32 group">
+                  <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 md:w-32 group">
                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
                       {a.image?.original ? (
                         <img

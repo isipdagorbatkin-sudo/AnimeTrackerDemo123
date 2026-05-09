@@ -86,15 +86,15 @@ export default function GenrePage() {
             <ArrowLeft className="h-4 w-4" />
             Вернуться на главную
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30">
-              <Filter className="h-8 w-8 text-white" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30 shrink-0">
+              <Filter className="h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
             </div>
-            <div>
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent mb-2">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
                 {translateGenre(genre)}
               </h1>
-              <p className="text-muted-foreground text-lg">
+              <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
                 Аниме в жанре {translateGenre(genre)}
               </p>
             </div>

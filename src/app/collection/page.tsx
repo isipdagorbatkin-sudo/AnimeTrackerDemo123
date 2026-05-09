@@ -148,14 +148,14 @@ export default function CollectionPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto text-center relative z-10">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               Моя коллекция
             </h1>
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+            <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
             Всего аниме: {collection.length}
           </p>
         </div>
@@ -170,20 +170,20 @@ export default function CollectionPage() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-            <TabsList className="bg-input border h-12">
-              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+            <TabsList className="bg-input border h-12 overflow-x-auto w-full">
+              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 Все ({counts.all})
               </TabsTrigger>
-              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 Смотрю ({counts.watching})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 Просмотрено ({counts.completed})
               </TabsTrigger>
-              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 В планах ({counts.plan_to_watch})
               </TabsTrigger>
-              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 Брошено ({counts.dropped})
               </TabsTrigger>
             </TabsList>
