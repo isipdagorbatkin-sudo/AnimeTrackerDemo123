@@ -6,10 +6,11 @@ import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScre
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2 } from 'lucide-react'
+import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2, Check } from 'lucide-react'
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function AnimePage() {
@@ -24,6 +25,7 @@ export default function AnimePage() {
   const [imageError, setImageError] = useState(false)
   const [screenshots, setScreenshots] = useState<string[]>([])
   const [similar, setSimilar] = useState<ShikimoriAnime[]>([])
+  const [isInCollection, setIsInCollection] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -41,6 +43,7 @@ export default function AnimePage() {
         if (data?.id) {
           getAnimeScreenshots(data.id).then(setScreenshots)
           getSimilarAnime(data.id).then(setSimilar)
+          checkInCollection(data.id)
         }
       } catch (err: any) {
         console.error('Error loading anime:', err)
@@ -52,6 +55,21 @@ export default function AnimePage() {
 
     loadAnime()
   }, [animeId, mounted])
+
+  const checkInCollection = async (id: number) => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('anime_collection')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('anime_id', id)
+        .maybeSingle()
+      setIsInCollection(!!data)
+    } catch {}
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -134,14 +152,26 @@ export default function AnimePage() {
               </div>
               <CardContent className="p-3 space-y-3">
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="flex-1 h-9"
-                    onClick={() => setIsAddDialogOpen(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    В коллекцию
-                  </Button>
+                  {isInCollection ? (
+                    <Button
+                      size="sm"
+                      className="flex-1 h-9"
+                      disabled
+                      variant="outline"
+                    >
+                      <Check className="mr-2 h-4 w-4 text-green-400" />
+                      <span className="text-green-400">В коллекции</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="flex-1 h-9"
+                      onClick={() => setIsAddDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      В коллекцию
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
