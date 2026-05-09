@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -25,16 +26,22 @@ function installFetchProxy() {
   ;(window as any).__supaProxyInstalled = true
 }
 
+let cachedClient: SupabaseClient<Database> | null = null
+
 export function createClient() {
   if (typeof window !== 'undefined') {
     installFetchProxy()
   }
 
-  return createBrowserClient<Database>(
+  if (cachedClient) return cachedClient
+
+  cachedClient = createBrowserClient<Database>(
     SUPA_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       realtime: { params: { log_level: 'error' as const } },
     }
   )
+
+  return cachedClient
 }

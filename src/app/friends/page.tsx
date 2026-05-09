@@ -122,12 +122,19 @@ export default function FriendsPage() {
   const acceptFriendRequest = async (requestId: string) => {
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Вы не авторизованы')
+
+      const { error, data } = await supabase
         .from('friendships')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
         .eq('id', requestId)
+        .select()
 
       if (error) throw error
+      if (!data || data.length === 0) throw new Error('Заявка не найдена или нет прав')
+
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId))
       loadFriendsData()
     } catch (err: any) {
       setError(err.message || 'Ошибка при принятии заявки')
@@ -137,13 +144,19 @@ export default function FriendsPage() {
   const rejectFriendRequest = async (requestId: string) => {
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Вы не авторизованы')
+
+      const { error, data } = await supabase
         .from('friendships')
         .update({ status: 'rejected', updated_at: new Date().toISOString() })
         .eq('id', requestId)
+        .select()
 
       if (error) throw error
-      loadFriendsData()
+      if (!data || data.length === 0) throw new Error('Заявка не найдена или нет прав')
+
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId))
     } catch (err: any) {
       setError(err.message || 'Ошибка при отклонении заявки')
     }
