@@ -58,28 +58,6 @@ export default function HomePage() {
     if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
   }, [])
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout>()
-  const loadMoreRef = useRef<HTMLDivElement>(null)
-  const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
-  const requestIdRef = useRef(0)
-  const loadAnimeRef = useRef<(page: number, append: boolean) => Promise<void>>()
-
-  useEffect(() => { loadAnimeRef.current = loadAnime }, [loadAnime])
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase
-        .from('anime_collection')
-        .select('anime_id')
-        .eq('user_id', user.id)
-        .then(({ data }) => {
-          if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
-        })
-    })
-  }, [])
-
   const loadAnime = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
       if (!append) setLoading(true)
@@ -103,6 +81,28 @@ export default function HomePage() {
       setLoading(false)
     }
   }, [activeTab])
+
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
+  const requestIdRef = useRef(0)
+  const loadAnimeRef = useRef(loadAnime)
+
+  useEffect(() => { loadAnimeRef.current = loadAnime }, [loadAnime])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('anime_collection')
+        .select('anime_id')
+        .eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+        })
+    })
+  }, [])
 
   useEffect(() => {
     loadAnime(1, false)
