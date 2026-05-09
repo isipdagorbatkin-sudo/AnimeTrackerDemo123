@@ -69,7 +69,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         getAnimeById(profileData.favorite_anime_id).then(setFavoriteAnime)
       }
 
-      const [collectionData, playlistsData, commentsData] = await Promise.all([
+      const [collectionResult, playlistsResult, commentsResult] = await Promise.all([
         supabase
           .from('anime_collection')
           .select('*')
@@ -87,9 +87,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           .order('created_at', { ascending: false }),
       ])
 
-      setCollection(collectionData || [])
-      setPlaylists(playlistsData || [])
-      setComments(commentsData || [])
+      setCollection(collectionResult.data || [])
+      setPlaylists(playlistsResult.data || [])
+      setComments(commentsResult.data || [])
     } catch (error) {
       console.error('Ошибка при загрузке профиля:', error)
     } finally {
