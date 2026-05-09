@@ -130,10 +130,22 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
   const handleAcceptFriendRequest = async () => {
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('Вы не авторизованы')
+
+      const { data: fresh } = await supabase
+        .from('friendships')
+        .select('id')
+        .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${params.id}),and(user_id.eq.${params.id},friend_id.eq.${currentUser.id})`)
+        .eq('status', 'pending')
+        .maybeSingle()
+
+      if (!fresh) throw new Error('Заявка не найдена или нет прав')
+
       const { error } = await supabase
         .from('friendships')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
-        .eq('id', friendship?.id)
+        .eq('id', fresh.id)
 
       if (error) throw error
       loadProfile()
@@ -270,6 +282,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   }
 
   const safeCollection = Array.isArray(collection) ? collection : []
+  const safePlaylists = Array.isArray(playlists) ? playlists : []
+  const safeComments = Array.isArray(comments) ? comments : []
   const watchingItems = safeCollection.filter(i => i.status === 'watching')
   const completedItems = safeCollection.filter(i => i.status === 'completed')
   const droppedItems = safeCollection.filter(i => i.status === 'dropped')
@@ -412,11 +426,11 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               </TabsTrigger>
               <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 <ListMusic className="h-4 w-4 mr-1" />
-                Плейлисты ({playlists.length})
+                Плейлисты ({safePlaylists.length})
               </TabsTrigger>
               <TabsTrigger value="comments" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 <MessageCircle className="h-4 w-4 mr-1" />
-                Комментарии ({comments.length})
+                Комментарии ({safeComments.length})
               </TabsTrigger>
               <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Статистика
@@ -494,14 +508,14 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {playlists.length === 0 ? (
+              {safePlaylists.length === 0 ? (
                 <div className="text-center py-20">
                   <ListMusic className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground text-lg">Плейлистов пока нет</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {playlists.map((playlist) => (
+                  {safePlaylists.map((playlist) => (
                     <PlaylistCard
                       key={playlist.id}
                       playlist={playlist}
@@ -560,14 +574,14 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {comments.length === 0 ? (
+              {safeComments.length === 0 ? (
                 <div className="text-center py-20">
                   <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground text-lg">Комментариев пока нет</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {comments.map((comment) => (
+                  {safeComments.map((comment) => (
                     <Card key={comment.id} className="glass">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
@@ -625,8 +639,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                           ? Math.round(safeCollection.reduce((sum, i) => sum + (i.rating || 0), 0) / safeCollection.filter(i => i.rating).length)
                           : '-',
                       },
-                      { label: 'Плейлистов', value: playlists.length },
-                      { label: 'Комментариев на стене', value: comments.length },
+                      { label: 'Плейлистов', value: safePlaylists.length },
+                      { label: 'Комментариев на стене', value: safeComments.length },
                     ].map((stat) => (
                       <div key={stat.label} className="glass p-6 rounded-xl">
                         <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
