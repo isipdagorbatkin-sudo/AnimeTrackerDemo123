@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, Sparkles, ChevronDown, Compass } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SearchPage() {
   const [query, setQuery] = useState('')
@@ -17,11 +18,37 @@ export default function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [remoteQuery, setRemoteQuery] = useState('')
+  const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set())
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('anime_collection')
+        .select('anime_id')
+        .eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+        })
+    })
+  }, [])
+
+  const refreshCollection = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('anime_collection')
+      .select('anime_id')
+      .eq('user_id', user.id)
+    if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -202,7 +229,7 @@ export default function SearchPage() {
                     'animate-fade-in-up',
                     `stagger-${Math.min(index % 10 + 1, 10)}`
                   )}>
-                    <ShikimoriAnimeCard anime={anime} />
+                    <ShikimoriAnimeCard anime={anime} isInCollection={collectionIds.has(anime.id)} onAddToCollection={refreshCollection} />
                   </div>
                 ))}
               </div>

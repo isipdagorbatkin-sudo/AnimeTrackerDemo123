@@ -183,6 +183,45 @@ export async function getSimilarAnime(animeId: number): Promise<ShikimoriAnime[]
     return []
   }
 }
+
+export interface ShikimoriRelation {
+  id: number
+  anime: ShikimoriAnime
+  relation: string
+  relation_russian: string
+}
+
+export async function getAnimeRelations(animeId: number): Promise<ShikimoriRelation[]> {
+  try {
+    const data = await fetchShikimori<any[]>(`/animes/${animeId}/related`)
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      anime: normalizeAnime(r.anime),
+      relation: r.relation,
+      relation_russian: r.relation_russian,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export function getRelationText(relation: string): string {
+  const map: Record<string, string> = {
+    sequel: 'Сиквел',
+    prequel: 'Приквел',
+    alternative_version: 'Альтернативная версия',
+    alternative_setting: 'Альтернативная вселенная',
+    spin_off: 'Спин-офф',
+    adaptation: 'Адаптация',
+    character: 'Персонажи',
+    side_story: 'Побочная история',
+    summary: 'Краткое содержание',
+    other: 'Другое',
+    parent_story: 'Основная история',
+    full_story: 'Полная история',
+  }
+  return map[relation] || relation
+}
 export function getTypeText(kind: string): string {
   const map: Record<string, string> = {
     tv: 'ТВ',

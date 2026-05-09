@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScreenshots, getSimilarAnime, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getAnimeByMalId, getAnimeById, getStatusText, getTypeText, getAnimeScreenshots, getSimilarAnime, getAnimeRelations, getRelationText, getFullImageUrl, ShikimoriAnime, ShikimoriRelation } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ export default function AnimePage() {
   const [imageError, setImageError] = useState(false)
   const [screenshots, setScreenshots] = useState<string[]>([])
   const [similar, setSimilar] = useState<ShikimoriAnime[]>([])
+  const [relations, setRelations] = useState<ShikimoriRelation[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function AnimePage() {
         if (data?.id) {
           getAnimeScreenshots(data.id).then(setScreenshots)
           getSimilarAnime(data.id).then(setSimilar)
+          getAnimeRelations(data.id).then(setRelations)
           checkInCollection(data.id)
         }
       } catch (err: any) {
@@ -307,10 +309,60 @@ export default function AnimePage() {
 
           </div>
 
+          {/* Relations */}
+          {relations.length > 0 && (
+            <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-primary" />
+                Связанное
+              </h3>
+              {(() => {
+                const grouped = relations.reduce<Record<string, ShikimoriRelation[]>>((acc, r) => {
+                  const key = r.relation_russian || getRelationText(r.relation)
+                  if (!acc[key]) acc[key] = []
+                  acc[key].push(r)
+                  return acc
+                }, {})
+                return Object.entries(grouped).map(([groupName, groupItems]) => (
+                  <div key={groupName} className="mb-6">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{groupName}</h4>
+                    <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      {groupItems.map((rel) => {
+                        const a = rel.anime
+                        const relTitle = a.russian || a.name
+                        return (
+                          <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 group">
+                            <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
+                              {a.image?.original ? (
+                                <img
+                                  src={getProxiedImageUrl(getFullImageUrl(a.image.original))}
+                                  alt={relTitle}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs font-medium line-clamp-2">{relTitle}</p>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
           {/* Similar */}
           {similar.length > 0 && (
             <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
-              <h3 className="text-xl font-bold mb-4">Похожие</h3>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Похожие
+              </h3>
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {similar.map((a) => (
                   <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 group">

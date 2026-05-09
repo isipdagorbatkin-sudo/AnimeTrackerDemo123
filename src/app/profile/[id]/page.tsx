@@ -7,9 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Calendar, User, MessageSquare, UserPlus, Share2, Loader2, Sparkles } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  ArrowLeft, Calendar, User, MessageSquare, UserPlus, Share2, Loader2,
+  MapPin, Quote, Star, Heart, Film, ListMusic, MessageCircle, Trash2, Send,
+  Plus, ImageIcon, Globe,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { AnimeDisplay } from '@/components/anime/AnimeDisplay'
+import { getAnimeById, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getProxiedImageUrl } from '@/lib/image-proxy'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -19,6 +26,15 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [isCurrentUser, setIsCurrentUser] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [favoriteAnime, setFavoriteAnime] = useState<ShikimoriAnime | null>(null)
+  const [playlists, setPlaylists] = useState<any[]>([])
+  const [comments, setComments] = useState<any[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [sendingComment, setSendingComment] = useState(false)
+  const [showNewPlaylist, setShowNewPlaylist] = useState(false)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
+  const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
+  const [creatingPlaylist, setCreatingPlaylist] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -48,13 +64,31 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       setProfile(profileData)
       setIsCurrentUser(currentUser?.id === params.id)
 
-      const { data: collectionData } = await supabase
-        .from('anime_collection')
-        .select('*')
-        .eq('user_id', params.id)
-        .order('updated_at', { ascending: false })
+      if (profileData.favorite_anime_id) {
+        getAnimeById(profileData.favorite_anime_id).then(setFavoriteAnime)
+      }
+
+      const [collectionData, playlistsData, commentsData] = await Promise.all([
+        supabase
+          .from('anime_collection')
+          .select('*')
+          .eq('user_id', params.id)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('custom_playlists')
+          .select('*')
+          .eq('user_id', params.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('profile_comments')
+          .select('*, author:author_id(id, username, avatar_url)')
+          .eq('profile_id', params.id)
+          .order('created_at', { ascending: false }),
+      ])
 
       setCollection(collectionData || [])
+      setPlaylists(playlistsData || [])
+      setComments(commentsData || [])
 
       if (currentUser && currentUser.id !== params.id) {
         const { data: friendshipData } = await supabase
@@ -108,6 +142,92 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     }
   }
 
+  const handleSendComment = async () => {
+    if (!newComment.trim()) return
+    setSendingComment(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Не авторизован')
+
+      const { data, error } = await supabase
+        .from('profile_comments')
+        .insert({
+          profile_id: params.id,
+          author_id: user.id,
+          content: newComment.trim(),
+        })
+        .select('*, author:author_id(id, username, avatar_url)')
+        .single()
+
+      if (error) throw error
+
+      setComments(prev => [data, ...prev])
+      setNewComment('')
+    } catch (error) {
+      console.error('Ошибка при отправке комментария:', error)
+    } finally {
+      setSendingComment(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profile_comments')
+        .delete()
+        .eq('id', commentId)
+
+      if (error) throw error
+      setComments(prev => prev.filter(c => c.id !== commentId))
+    } catch (error) {
+      console.error('Ошибка при удалении комментария:', error)
+    }
+  }
+
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistName.trim()) return
+    setCreatingPlaylist(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Не авторизован')
+
+      const { data, error } = await supabase
+        .from('custom_playlists')
+        .insert({
+          user_id: user.id,
+          name: newPlaylistName.trim(),
+          description: newPlaylistDesc.trim() || null,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setPlaylists(prev => [data, ...prev])
+      setNewPlaylistName('')
+      setNewPlaylistDesc('')
+      setShowNewPlaylist(false)
+    } catch (error) {
+      console.error('Ошибка при создании плейлиста:', error)
+    } finally {
+      setCreatingPlaylist(false)
+    }
+  }
+
+  const handleDeletePlaylist = async (playlistId: string) => {
+    try {
+      const { error } = await supabase
+        .from('custom_playlists')
+        .delete()
+        .eq('id', playlistId)
+
+      if (error) throw error
+      setPlaylists(prev => prev.filter(p => p.id !== playlistId))
+    } catch (error) {
+      console.error('Ошибка при удалении плейлиста:', error)
+    }
+  }
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
@@ -149,9 +269,25 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     )
   }
 
+  const watchingItems = collection.filter(i => i.status === 'watching')
+  const completedItems = collection.filter(i => i.status === 'completed')
+  const droppedItems = collection.filter(i => i.status === 'dropped')
+  const planItems = collection.filter(i => i.status === 'plan_to_watch')
+
   return (
     <div className="min-h-screen">
-      <section className="relative overflow-hidden py-10 px-4">
+      {profile.background_url && (
+        <div className="absolute top-0 left-0 right-0 h-48 md:h-64 overflow-hidden -z-10">
+          <img
+            src={getProxiedImageUrl(profile.background_url)}
+            alt=""
+            className="w-full h-full object-cover opacity-30"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
+        </div>
+      )}
+
+      <section className="relative overflow-hidden py-8 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
@@ -160,21 +296,38 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           </Button>
 
           <Card className="glass">
+            {profile.banner_url && (
+              <div className="relative h-32 sm:h-48 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
+                <img
+                  src={getProxiedImageUrl(profile.banner_url)}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent" />
+              </div>
+            )}
             <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0 sm:justify-between">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                      <AvatarImage src={profile.avatar_url || undefined} />
-                      <AvatarFallback className="text-xl sm:text-2xl">{getInitials(profile.username)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <CardTitle className="text-xl sm:text-2xl break-words">{profile.username}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
-                        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                        Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
-                      </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0 sm:justify-between">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Avatar className={`h-16 w-16 sm:h-20 sm:w-20 ${profile.banner_url ? '-mt-12 sm:-mt-16 ring-4 ring-card' : ''}`}>
+                    <AvatarImage src={profile.avatar_url || undefined} />
+                    <AvatarFallback className="text-xl sm:text-2xl">{getInitials(profile.username)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="text-xl sm:text-2xl break-words">{profile.username}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                      Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
+                      {profile.country && (
+                        <>
+                          <span className="text-muted-foreground/40">•</span>
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          {profile.country}
+                        </>
+                      )}
                     </div>
                   </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {isCurrentUser ? (
                     <Button variant="outline" size="sm" onClick={() => router.push('/profile/settings')}>
@@ -204,6 +357,34 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   )}
                 </div>
               </div>
+
+              {profile.bio && (
+                <div className="mt-4 flex items-start gap-2 text-sm text-muted-foreground">
+                  <Quote className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                  <p className="italic">{profile.bio}</p>
+                </div>
+              )}
+
+              {favoriteAnime && (
+                <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <Heart className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    {favoriteAnime.image?.original && (
+                      <img
+                        src={getProxiedImageUrl(getFullImageUrl(favoriteAnime.image.x48 || favoriteAnime.image.preview))}
+                        alt=""
+                        className="h-10 w-7 rounded object-cover shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Любимое аниме</p>
+                      <p className="text-sm font-medium truncate">
+                        {favoriteAnime.russian || favoriteAnime.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
           </Card>
         </div>
@@ -212,9 +393,29 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       <section className="px-4 pb-16">
         <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
-            <TabsList className="bg-input border h-12 mb-6">
+            <TabsList className="bg-input border h-auto flex-wrap mb-6">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Коллекция ({collection.length})
+              </TabsTrigger>
+              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                Смотрю ({watchingItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                Просмотрено ({completedItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                В планах ({planItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                Брошено ({droppedItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                <ListMusic className="h-4 w-4 mr-1" />
+                Плейлисты ({playlists.length})
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                <MessageCircle className="h-4 w-4 mr-1" />
+                Комментарии ({comments.length})
               </TabsTrigger>
               <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Статистика
@@ -231,34 +432,170 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {collection.map((item) => (
-                    <Card key={item.id} className="glass">
+                <CollectionList items={collection} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="watching">
+              <CollectionList items={watchingItems} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+            </TabsContent>
+
+            <TabsContent value="completed">
+              <CollectionList items={completedItems} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+            </TabsContent>
+
+            <TabsContent value="plan_to_watch">
+              <CollectionList items={planItems} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+            </TabsContent>
+
+            <TabsContent value="dropped">
+              <CollectionList items={droppedItems} getStatusText={getStatusText} getStatusColor={getStatusColor} />
+            </TabsContent>
+
+            <TabsContent value="playlists">
+              {isCurrentUser && (
+                <div className="mb-6">
+                  {showNewPlaylist ? (
+                    <Card className="glass mb-4">
                       <CardHeader>
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <AnimeDisplay animeId={item.anime_id} />
-                          </div>
-                          <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm`}>
-                            {getStatusText(item.status)}
-                          </Badge>
-                        </div>
-                        <CardDescription>
-                          Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
-                        </CardDescription>
+                        <CardTitle className="text-base">Новый плейлист</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {item.rating && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">Оценка:</span>
-                              <span className="font-bold">{item.rating}/100</span>
+                      <CardContent className="space-y-4">
+                        <Input
+                          placeholder="Название плейлиста"
+                          value={newPlaylistName}
+                          onChange={(e) => setNewPlaylistName(e.target.value)}
+                          disabled={creatingPlaylist}
+                          className="bg-input border"
+                        />
+                        <Textarea
+                          placeholder="Описание (необязательно)"
+                          value={newPlaylistDesc}
+                          onChange={(e) => setNewPlaylistDesc(e.target.value)}
+                          disabled={creatingPlaylist}
+                          className="bg-input border"
+                        />
+                        <div className="flex gap-2">
+                          <Button onClick={handleCreatePlaylist} disabled={creatingPlaylist || !newPlaylistName.trim()}>
+                            {creatingPlaylist ? 'Создание...' : 'Создать'}
+                          </Button>
+                          <Button variant="outline" onClick={() => setShowNewPlaylist(false)}>
+                            Отмена
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Button onClick={() => setShowNewPlaylist(true)}>
+                      <Plus className="h-4 w-4 mr-2" /> Новый плейлист
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {playlists.length === 0 ? (
+                <div className="text-center py-20">
+                  <ListMusic className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-lg">Плейлистов пока нет</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {playlists.map((playlist) => (
+                    <PlaylistCard
+                      key={playlist.id}
+                      playlist={playlist}
+                      isOwner={isCurrentUser}
+                      onDelete={handleDeletePlaylist}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="comments">
+              {isCurrentUser ? (
+                <div className="flex gap-3 mb-6">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={profile.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">{getInitials(profile.username)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 flex gap-2">
+                    <Textarea
+                      placeholder="Напишите что-нибудь о себе..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={sendingComment}
+                      className="bg-input border min-h-[60px] flex-1"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSendComment}
+                      disabled={sendingComment || !newComment.trim()}
+                      className="shrink-0 self-end"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3 mb-6">
+                  <div className="flex-1 flex gap-2">
+                    <Textarea
+                      placeholder="Напишите комментарий..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={sendingComment}
+                      className="bg-input border min-h-[60px] flex-1"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSendComment}
+                      disabled={sendingComment || !newComment.trim()}
+                      className="shrink-0 self-end"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {comments.length === 0 ? (
+                <div className="text-center py-20">
+                  <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-lg">Комментариев пока нет</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <Card key={comment.id} className="glass">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={comment.author?.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {comment.author ? getInitials(comment.author.username) : '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium">{comment.author?.username || 'Неизвестно'}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(comment.created_at).toLocaleDateString('ru-RU')}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{comment.content}</p>
                             </div>
-                          )}
-                          {item.review && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {item.review}
-                            </p>
+                          </div>
+                          {(isCurrentUser || comment.author_id === profile.id) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteComment(comment.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </CardContent>
@@ -277,14 +614,18 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   <div className="grid gap-4 md:grid-cols-2">
                     {[
                       { label: 'Всего аниме', value: collection.length },
-                      { label: 'Смотрю сейчас', value: collection.filter(i => i.status === 'watching').length },
-                      { label: 'Просмотрено', value: collection.filter(i => i.status === 'completed').length },
+                      { label: 'Смотрю сейчас', value: watchingItems.length },
+                      { label: 'Просмотрено', value: completedItems.length },
+                      { label: 'В планах', value: planItems.length },
+                      { label: 'Брошено', value: droppedItems.length },
                       {
                         label: 'Средняя оценка',
                         value: collection.filter(i => i.rating).length > 0
                           ? Math.round(collection.reduce((sum, i) => sum + (i.rating || 0), 0) / collection.filter(i => i.rating).length)
                           : '-',
                       },
+                      { label: 'Плейлистов', value: playlists.length },
+                      { label: 'Комментариев на стене', value: comments.length },
                     ].map((stat) => (
                       <div key={stat.label} className="glass p-6 rounded-xl">
                         <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
@@ -298,6 +639,176 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           </Tabs>
         </div>
       </section>
+    </div>
+  )
+}
+
+function CollectionList({
+  items,
+  getStatusText,
+  getStatusColor,
+}: {
+  items: any[]
+  getStatusText: (s: string) => string
+  getStatusColor: (s: string) => string
+}) {
+  const [animeCache, setAnimeCache] = useState<Record<number, ShikimoriAnime | null>>({})
+
+  useEffect(() => {
+    items.forEach(item => {
+      if (!animeCache[item.anime_id]) {
+        getAnimeById(item.anime_id).then(data => {
+          setAnimeCache(prev => ({ ...prev, [item.anime_id]: data }))
+        })
+      }
+    })
+  }, [items])
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-muted-foreground text-lg">Нет аниме в этой категории</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-4">
+      {items.map((item) => {
+        const anime = animeCache[item.anime_id]
+        const title = anime?.russian || anime?.name || 'Загрузка...'
+        const imageUrl = anime?.image?.original
+          ? getProxiedImageUrl(getFullImageUrl(anime.image.x96 || anime.image.preview))
+          : null
+
+        return (
+          <Card key={item.id} className="glass">
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  {imageUrl && (
+                    <img src={imageUrl} alt={title} className="h-16 w-12 rounded object-cover shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{title}</p>
+                    <CardDescription>
+                      Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm shrink-0`}>
+                  {getStatusText(item.status)}
+                </Badge>
+              </div>
+            </CardHeader>
+            {(item.rating || item.review) && (
+              <CardContent>
+                <div className="space-y-2">
+                  {item.rating && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Оценка:</span>
+                      <span className="font-bold">{item.rating}/100</span>
+                    </div>
+                  )}
+                  {item.review && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{item.review}</p>
+                  )}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+function PlaylistCard({
+  playlist,
+  isOwner,
+  onDelete,
+}: {
+  playlist: any
+  isOwner: boolean
+  onDelete: (id: string) => void
+}) {
+  const [items, setItems] = useState<any[]>([])
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return
+    const supabase = createClient()
+    supabase
+      .from('playlist_items')
+      .select('*')
+      .eq('playlist_id', playlist.id)
+      .order('added_at', { ascending: false })
+      .then(({ data }) => setItems(data || []))
+  }, [expanded, playlist.id])
+
+  return (
+    <Card className="glass">
+      <CardHeader className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between">
+          <div className="min-w-0">
+            <CardTitle className="text-base">{playlist.name}</CardTitle>
+            {playlist.description && (
+              <CardDescription>{playlist.description}</CardDescription>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isOwner && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); onDelete(playlist.id) }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent>
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Плейлист пуст</p>
+          ) : (
+            <div className="space-y-2">
+              {items.map((item) => (
+                <PlaylistItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+function PlaylistItemCard({ item }: { item: any }) {
+  const [anime, setAnime] = useState<ShikimoriAnime | null>(null)
+
+  useEffect(() => {
+    getAnimeById(item.anime_id).then(setAnime)
+  }, [item.anime_id])
+
+  const title = anime?.russian || anime?.name || 'Загрузка...'
+  const imageUrl = anime?.image?.original
+    ? getProxiedImageUrl(getFullImageUrl(anime.image.x48 || anime.image.preview))
+    : null
+
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+      {imageUrl ? (
+        <img src={imageUrl} alt={title} className="h-10 w-7 rounded object-cover shrink-0" />
+      ) : (
+        <div className="h-10 w-7 rounded bg-muted flex items-center justify-center shrink-0">
+          <Film className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+      <span className="text-sm truncate">{title}</span>
     </div>
   )
 }

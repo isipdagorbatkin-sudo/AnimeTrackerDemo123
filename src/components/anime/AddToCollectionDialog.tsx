@@ -15,9 +15,10 @@ interface AddToCollectionDialogProps {
   onClose: () => void
   animeId: number
   animeTitle: string
+  onSuccess?: () => void
 }
 
-export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle }: AddToCollectionDialogProps) {
+export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle, onSuccess }: AddToCollectionDialogProps) {
   const [status, setStatus] = useState<'watching' | 'completed' | 'plan_to_watch' | 'dropped'>('watching')
   const [rating, setRating] = useState<number>(0)
   const [review, setReview] = useState('')
@@ -37,6 +38,17 @@ export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle }: 
         throw new Error('Вы не авторизованы')
       }
 
+      const { data: existing } = await supabase
+        .from('anime_collection')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('anime_id', animeId)
+        .maybeSingle()
+
+      if (existing) {
+        throw new Error('Это аниме уже в вашей коллекции')
+      }
+
       const { error } = await supabase.from('anime_collection').insert({
         user_id: user.id,
         anime_id: animeId,
@@ -48,6 +60,7 @@ export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle }: 
       if (error) throw error
 
       onClose()
+      onSuccess?.()
     } catch (err: any) {
       setError(err.message || 'Ошибка при добавлении')
     } finally {

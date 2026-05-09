@@ -12,6 +12,7 @@ import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
 import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies'
 
@@ -44,11 +45,40 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [remoteSearchQuery, setRemoteSearchQuery] = useState('')
+  const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set())
+
+  const refreshCollection = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('anime_collection')
+      .select('anime_id')
+      .eq('user_id', user.id)
+    if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+  }, [])
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
+  const loadAnimeRef = useRef(loadAnime)
+
+  useEffect(() => { loadAnimeRef.current = loadAnime }, [loadAnime])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('anime_collection')
+        .select('anime_id')
+        .eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+        })
+    })
+  }, [])
 
   const loadAnime = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
@@ -104,6 +134,10 @@ export default function HomePage() {
     const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery || normalizedQuery.length < 2) {
       if (selectedGenre) return
+      if (normalizedQuery.length === 0 && !selectedGenre) {
+        loadAnimeRef.current(1, false)
+        return
+      }
       setAnimeList([])
       setHasMore(false)
       setRemoteSearchQuery('')
@@ -126,13 +160,13 @@ export default function HomePage() {
         setLoading(true)
         setError('')
 
-        const results = await searchAnime(normalizedQuery, 1, 5)
+        const results = await searchAnime(normalizedQuery, 1, 20)
 
         if (requestIdRef.current !== requestId) return
 
         const deduped = dedupeAnime(results || [])
         setAnimeList(deduped)
-        const searchHasMore = results.length >= 5
+        const searchHasMore = results.length >= 20
         setHasMore(searchHasMore)
         setRemoteSearchQuery(normalizedQuery)
         setCurrentPage(1)
@@ -152,7 +186,7 @@ export default function HomePage() {
           setLoading(false)
         }
       }
-    }, 1200)
+    }, 400)
     return () => clearTimeout(searchTimeoutRef.current)
   }, [searchQuery, selectedGenre])
 
@@ -358,7 +392,7 @@ export default function HomePage() {
               <div>
                 <div className="anime-grid">
                   {animeList.map((anime) => (
-                    <ShikimoriAnimeCard key={anime.id} anime={anime} />
+                    <ShikimoriAnimeCard key={anime.id} anime={anime} isInCollection={collectionIds.has(anime.id)} onAddToCollection={refreshCollection} />
                   ))}
                 </div>
 

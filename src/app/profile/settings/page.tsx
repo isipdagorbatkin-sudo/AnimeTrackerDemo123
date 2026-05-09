@@ -5,19 +5,34 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User, Camera, Save, Loader2, Sparkles } from 'lucide-react'
+import { searchAnime, getAnimeById, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
+import { getProxiedImageUrl } from '@/lib/image-proxy'
+import { User, Camera, Save, Loader2, Sparkles, MapPin, Quote, Image, Heart, Search, X, Globe, Film, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function ProfileSettingsPage() {
+  const router = useRouter()
   const [profile, setProfile] = useState<any>(null)
   const [username, setUsername] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [country, setCountry] = useState('')
+  const [bio, setBio] = useState('')
+  const [bannerUrl, setBannerUrl] = useState('')
+  const [backgroundUrl, setBackgroundUrl] = useState('')
+  const [favoriteAnimeId, setFavoriteAnimeId] = useState<number | null>(null)
+  const [favoriteAnime, setFavoriteAnime] = useState<ShikimoriAnime | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<ShikimoriAnime[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -29,10 +44,32 @@ export default function ProfileSettingsPage() {
     loadProfile()
   }, [mounted])
 
+  useEffect(() => {
+    if (!searchQuery.trim() || !showSearch) {
+      setSearchResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const results = await searchAnime(searchQuery, 1, 10)
+        setSearchResults(results)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery, showSearch])
+
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Вы не авторизованы')
+      if (!user) {
+        router.push('/login')
+        return
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -45,6 +82,15 @@ export default function ProfileSettingsPage() {
       setProfile(data)
       setUsername(data.username)
       setAvatarUrl(data.avatar_url || '')
+      setCountry(data.country || '')
+      setBio(data.bio || '')
+      setBannerUrl(data.banner_url || '')
+      setBackgroundUrl(data.background_url || '')
+      setFavoriteAnimeId(data.favorite_anime_id)
+
+      if (data.favorite_anime_id) {
+        getAnimeById(data.favorite_anime_id).then(setFavoriteAnime)
+      }
     } catch (err: any) {
       setError(err.message || 'Ошибка при загрузке профиля')
     } finally {
@@ -67,6 +113,11 @@ export default function ProfileSettingsPage() {
         .update({
           username: username.trim(),
           avatar_url: avatarUrl.trim() || null,
+          country: country.trim() || null,
+          bio: bio.trim() || null,
+          banner_url: bannerUrl.trim() || null,
+          background_url: backgroundUrl.trim() || null,
+          favorite_anime_id: favoriteAnimeId,
         })
         .eq('id', user.id)
 
@@ -79,6 +130,19 @@ export default function ProfileSettingsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSelectFavorite = (anime: ShikimoriAnime) => {
+    setFavoriteAnimeId(anime.id)
+    setFavoriteAnime(anime)
+    setShowSearch(false)
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  const handleRemoveFavorite = () => {
+    setFavoriteAnimeId(null)
+    setFavoriteAnime(null)
   }
 
   const getInitials = (name: string) => {
@@ -116,7 +180,7 @@ export default function ProfileSettingsPage() {
       </section>
 
       <section className="px-4 pb-16">
-        <div className="container mx-auto max-w-2xl">
+        <div className="container mx-auto max-w-2xl space-y-6">
           <Card className="glass">
             <CardHeader>
               <CardTitle>Информация профиля</CardTitle>
@@ -164,7 +228,6 @@ export default function ProfileSettingsPage() {
                     disabled={saving}
                     className="bg-input border"
                   />
-                  <p className="text-xs text-muted-foreground">Вставьте ссылку на изображение для аватара</p>
                 </div>
 
                 <div className="space-y-2">
@@ -181,18 +244,173 @@ export default function ProfileSettingsPage() {
                     maxLength={30}
                     className="bg-input border"
                   />
-                  <p className="text-xs text-muted-foreground">От 3 до 30 символов</p>
                 </div>
 
-                <Button type="submit" disabled={saving}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Сохранение...' : 'Сохранить'}
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="country">
+                    <MapPin className="h-4 w-4 inline mr-1" />
+                    Страна
+                  </Label>
+                  <Input
+                    id="country"
+                    type="text"
+                    placeholder="Россия"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    disabled={saving}
+                    maxLength={100}
+                    className="bg-input border"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">
+                    <Quote className="h-4 w-4 inline mr-1" />
+                    О себе
+                  </Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Расскажите немного о себе..."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    disabled={saving}
+                    maxLength={500}
+                    className="bg-input border min-h-[100px]"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bannerUrl">
+                    <Image className="h-4 w-4 inline mr-1" />
+                    URL баннера
+                  </Label>
+                  <Input
+                    id="bannerUrl"
+                    type="url"
+                    placeholder="https://example.com/banner.jpg"
+                    value={bannerUrl}
+                    onChange={(e) => setBannerUrl(e.target.value)}
+                    disabled={saving}
+                    className="bg-input border"
+                  />
+                  {bannerUrl && (
+                    <div className="relative h-24 rounded-xl overflow-hidden mt-2">
+                      <img src={getProxiedImageUrl(bannerUrl)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="backgroundUrl">
+                    <Globe className="h-4 w-4 inline mr-1" />
+                    URL фона страницы
+                  </Label>
+                  <Input
+                    id="backgroundUrl"
+                    type="url"
+                    placeholder="https://example.com/background.jpg"
+                    value={backgroundUrl}
+                    onChange={(e) => setBackgroundUrl(e.target.value)}
+                    disabled={saving}
+                    className="bg-input border"
+                  />
+                  {backgroundUrl && (
+                    <div className="relative h-16 rounded-xl overflow-hidden mt-2">
+                      <img src={getProxiedImageUrl(backgroundUrl)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    <Heart className="h-4 w-4 inline mr-1" />
+                    Любимое аниме
+                  </Label>
+                  {favoriteAnime ? (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                      {favoriteAnime.image?.original && (
+                        <img
+                          src={getProxiedImageUrl(getFullImageUrl(favoriteAnime.image.x48 || favoriteAnime.image.preview))}
+                          alt=""
+                          className="h-12 w-9 rounded object-cover shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{favoriteAnime.russian || favoriteAnime.name}</p>
+                        <p className="text-xs text-muted-foreground">{favoriteAnime.score?.toFixed(1)}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleRemoveFavorite}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Не выбрано</p>
+                  )}
+                  <div className="relative">
+                    {showSearch ? (
+                      <div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Поиск аниме..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-input border flex-1"
+                            autoFocus
+                          />
+                          <Button type="button" variant="outline" size="icon" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]) }}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {searching && (
+                          <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Поиск...
+                          </div>
+                        )}
+                        {searchResults.length > 0 && (
+                          <div className="mt-2 border border-border rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+                            {searchResults.map((anime) => (
+                              <button
+                                key={anime.id}
+                                type="button"
+                                className="flex items-center gap-3 w-full p-3 hover:bg-muted/50 transition-colors text-left"
+                                onClick={() => handleSelectFavorite(anime)}
+                              >
+                                {anime.image?.preview ? (
+                                  <img src={getProxiedImageUrl(getFullImageUrl(anime.image.x48 || anime.image.preview))} alt="" className="h-10 w-7 rounded object-cover shrink-0" />
+                                ) : (
+                                  <div className="h-10 w-7 rounded bg-muted flex items-center justify-center shrink-0">
+                                    <Film className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{anime.russian || anime.name}</p>
+                                  <p className="text-xs text-muted-foreground">{anime.score?.toFixed(1)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowSearch(true)}>
+                        <Search className="h-4 w-4 mr-2" /> Выбрать аниме
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border">
+                  <Button type="submit" disabled={saving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Сохранение...' : 'Сохранить изменения'}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="glass mt-6">
+          <Card className="glass">
             <CardHeader>
               <CardTitle>Опасная зона</CardTitle>
               <CardDescription>Удаление аккаунта</CardDescription>

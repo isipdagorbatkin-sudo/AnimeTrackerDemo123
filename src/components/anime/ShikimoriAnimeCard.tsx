@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ShikimoriAnime, getTypeText } from '@/lib/shikimori/client'
 import { Button } from '@/components/ui/button'
-import { Plus, Star, Calendar, PlayCircle, Share2, Image as ImageIcon, Clock } from 'lucide-react'
+import { Plus, Star, Calendar, PlayCircle, Share2, Image as ImageIcon, Clock, Check } from 'lucide-react'
 import { AddToCollectionDialog } from './AddToCollectionDialog'
 import { ShareAnimeDialog } from './ShareAnimeDialog'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,8 @@ import Link from 'next/link'
 
 interface ShikimoriAnimeCardProps {
   anime: ShikimoriAnime
+  isInCollection?: boolean
+  onAddToCollection?: () => void
 }
 
 function getScoreColor(score: number): string {
@@ -19,7 +21,7 @@ function getScoreColor(score: number): string {
   return 'text-red-400'
 }
 
-export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
+export function ShikimoriAnimeCard({ anime, isInCollection, onAddToCollection }: ShikimoriAnimeCardProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -76,6 +78,15 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
                 <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90">
                   <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   {statusMap[anime.status] || anime.status}
+                </span>
+              </div>
+            )}
+
+            {isInCollection && (
+              <div className="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-emerald-500/90 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white shadow-lg shadow-emerald-500/30">
+                  <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  В коллекции
                 </span>
               </div>
             )}
@@ -139,15 +150,25 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
           <div className="flex gap-1 sm:gap-1.5 pt-1">
             <Button
               size="sm"
-              className="flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 text-[0.55rem] sm:text-[0.65rem] shadow-[0_10px_30px_rgba(168,85,247,0.25)]"
+              variant={isInCollection ? "outline" : "default"}
+              className={cn(
+                "flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 text-[0.55rem] sm:text-[0.65rem]",
+                isInCollection
+                  ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                  : "shadow-[0_10px_30px_rgba(168,85,247,0.25)]"
+              )}
               onClick={(e) => {
                 e.preventDefault()
-                setIsAddDialogOpen(true)
+                if (!isInCollection) setIsAddDialogOpen(true)
               }}
             >
-              <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-              <span className="hidden sm:inline">В коллекцию</span>
-              <span className="sm:hidden">+</span>
+              {isInCollection ? (
+                <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              ) : (
+                <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              )}
+              <span className="hidden sm:inline">{isInCollection ? 'В коллекции' : 'В коллекцию'}</span>
+              <span className="sm:hidden">{isInCollection ? '✓' : '+'}</span>
             </Button>
             <Button
               size="sm"
@@ -169,6 +190,7 @@ export function ShikimoriAnimeCard({ anime }: ShikimoriAnimeCardProps) {
         onClose={() => setIsAddDialogOpen(false)}
         animeId={collectionId}
         animeTitle={title}
+        onSuccess={onAddToCollection}
       />
 
       <ShareAnimeDialog

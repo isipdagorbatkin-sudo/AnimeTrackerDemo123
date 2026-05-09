@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Navigation } from '@/components/layout/Navigation'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { Analytics } from '@vercel/analytics/next'
+import { ScrollToTop } from '@/components/ui/ScrollToTop'
 
 const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
@@ -62,6 +63,7 @@ export default async function RootLayout({
             {children}
           </main>
         )}
+        <ScrollToTop />
         <Analytics />
       </body>
     </html>
