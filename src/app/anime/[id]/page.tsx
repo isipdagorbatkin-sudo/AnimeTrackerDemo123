@@ -113,7 +113,7 @@ export default function AnimePage() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* Content */}
-      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl">
+      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl overflow-x-hidden">
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 max-w-full">
           {/* Left Column - Cover */}
           <div className="lg:col-span-1">
@@ -263,7 +263,7 @@ export default function AnimePage() {
             {screenshots.length > 0 && (
               <div>
                 <h3 className="text-xl font-bold mb-4">Кадры</h3>
-                <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
                   {screenshots.map((url, i) => (
                     <img
                       key={i}
@@ -282,7 +282,7 @@ export default function AnimePage() {
           {similar.length > 0 && (
             <div className="lg:col-span-3 mt-8">
               <h3 className="text-xl font-bold mb-4">Похожие</h3>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                 {similar.map((a) => (
                   <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 md:w-32 group">
                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2">
