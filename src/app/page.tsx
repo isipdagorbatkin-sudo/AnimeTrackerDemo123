@@ -62,7 +62,7 @@ export default function HomePage() {
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
-  const loadAnimeRef = useRef(loadAnime)
+  const loadAnimeRef = useRef<(page: number, append: boolean) => Promise<void>>()
 
   useEffect(() => { loadAnimeRef.current = loadAnime }, [loadAnime])
 
