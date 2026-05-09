@@ -193,6 +193,9 @@ export default function FriendsPage() {
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
             Найдите друзей и общайтесь
           </p>
+          <button onClick={async () => { if (!confirm('Удалить всех друзей и заявки?')) return; await fetch('/api/reset-friends', { method: 'POST' }); location.reload() }} className="mt-4 text-xs text-destructive/60 hover:text-destructive transition-colors underline">
+            Сбросить все заявки и друзей
+          </button>
         </div>
       </section>
 
