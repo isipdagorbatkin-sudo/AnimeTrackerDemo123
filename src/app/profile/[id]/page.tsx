@@ -238,19 +238,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
 
   return (
-    <div className="min-h-screen relative">
-      {profile.background_url && (
-        <div className="fixed inset-0 -z-10 overflow-hidden">
-          <img
-            src={getProxiedImageUrl(profile.background_url)}
-            alt=""
-            className="w-full h-full object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
-        </div>
-      )}
+    <div className="min-h-screen">
 
-      <section className="relative overflow-hidden py-8 px-4">
+      <section className="relative overflow-hidden py-16 px-4 bg-background">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
@@ -258,9 +248,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             <ArrowLeft className="h-4 w-4 mr-2" /> Назад
           </Button>
 
-          <Card className="glass">
+          <Card className="bg-card border shadow-xl">
             {profile.banner_url && (
-              <div className="relative h-32 sm:h-48 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
+              <div className="relative h-48 sm:h-64 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
                 <img
                   src={getProxiedImageUrl(profile.banner_url)}
                   alt=""
@@ -269,22 +259,22 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent" />
               </div>
             )}
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0 sm:justify-between">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <Avatar className={`h-16 w-16 sm:h-20 sm:w-20 ${profile.banner_url ? '-mt-12 sm:-mt-16 ring-4 ring-card' : ''}`}>
+            <CardHeader className="pt-8">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-0 sm:justify-between">
+                <div className="flex items-center gap-4 sm:gap-6">
+                  <Avatar className={`h-20 w-20 sm:h-24 sm:w-24 ${profile.banner_url ? '-mt-16 sm:-mt-20 ring-4 ring-card' : ''}`}>
                     <AvatarImage src={profile.avatar_url || undefined} />
-                    <AvatarFallback className="text-xl sm:text-2xl">{getInitials(profile.username)}</AvatarFallback>
+                    <AvatarFallback className="text-2xl sm:text-3xl">{getInitials(profile.username)}</AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 space-y-1">
-                    <CardTitle className="text-xl sm:text-2xl break-words">{profile.username}</CardTitle>
-                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                  <div className="min-w-0 space-y-2">
+                    <CardTitle className="text-2xl sm:text-3xl break-words">{profile.username}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 shrink-0" />
                       Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
                       {profile.country && (
                         <>
                           <span className="text-muted-foreground/40">•</span>
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <MapPin className="h-4 w-4 shrink-0" />
                           {profile.country}
                         </>
                       )}
@@ -305,26 +295,26 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               </div>
 
               {profile.bio && (
-                <div className="mt-4 flex items-start gap-2 text-sm text-muted-foreground">
-                  <Quote className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                <div className="mt-6 flex items-start gap-2 text-base text-muted-foreground">
+                  <Quote className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                   <p className="italic">{profile.bio}</p>
                 </div>
               )}
 
               {favoriteAnime && (
-                <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <Heart className="h-5 w-5 text-primary shrink-0" />
+                <div className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <Heart className="h-6 w-6 text-primary shrink-0" />
                   <div className="flex items-center gap-3 min-w-0">
                     {favoriteAnime.image?.original && (
                       <img
                         src={getProxiedImageUrl(getFullImageUrl(favoriteAnime.image.x48 || favoriteAnime.image.preview))}
                         alt=""
-                        className="h-10 w-7 rounded object-cover shrink-0"
+                        className="h-12 w-9 rounded object-cover shrink-0"
                       />
                     )}
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Любимое аниме</p>
-                      <p className="text-sm font-medium truncate">
+                      <p className="text-base font-medium truncate">
                         {favoriteAnime.russian || favoriteAnime.name}
                       </p>
                     </div>
@@ -336,8 +326,18 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         </div>
       </section>
 
-      <section className="px-4 pb-16 mt-12">
-        <div className="container mx-auto max-w-4xl">
+      <section className="px-4 pb-16 mt-12 relative">
+        {profile.background_url && (
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              src={getProxiedImageUrl(profile.background_url)}
+              alt=""
+              className="w-full h-full object-cover opacity-20"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
+          </div>
+        )}
+        <div className="container mx-auto max-w-4xl relative z-10">
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-8">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
