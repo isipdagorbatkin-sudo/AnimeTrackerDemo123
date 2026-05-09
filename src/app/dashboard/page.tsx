@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { BookOpen, Users, MessageSquare, TrendingUp, Sparkles, Flame } from 'lucide-react'
+import { BookOpen, MessageSquare, TrendingUp, Sparkles, Flame } from 'lucide-react'
 import { AnimeDisplayServer } from '@/components/anime/AnimeDisplayServer'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -44,17 +44,12 @@ export default async function DashboardPage() {
   const [
     { count: collectionCount },
     { count: watchingCount },
-    { count: friendsAsUserCount },
-    { count: friendsAsFriendCount },
     { count: unreadMessagesCount },
   ] = await Promise.all([
     supabase.from('anime_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('anime_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'watching'),
-    supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'accepted'),
-    supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('friend_id', user.id).eq('status', 'accepted'),
     supabase.from('messages').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).is('read_at', null),
   ])
-  const friendsCount = (friendsAsUserCount || 0) + (friendsAsFriendCount || 0)
 
   const stats = [
     {
@@ -70,13 +65,6 @@ export default async function DashboardPage() {
       description: 'Активный просмотр',
       icon: TrendingUp,
       color: 'text-emerald-400',
-    },
-    {
-      title: 'Друзья',
-      value: friendsCount || 0,
-      description: 'В друзьях',
-      icon: Users,
-      color: 'text-cyan-400',
     },
     {
       title: 'Непрочитанные',

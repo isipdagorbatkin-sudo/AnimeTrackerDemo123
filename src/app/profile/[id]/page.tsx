@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  ArrowLeft, Calendar, User, MessageSquare, UserPlus, Share2, Loader2,
-  MapPin, Quote, Star, Heart, Film, ListMusic, MessageCircle, Trash2, Send,
-  Plus, ImageIcon, Globe,
+  ArrowLeft, Calendar, User, MessageSquare, Loader2,
+  MapPin, Quote, Heart, Film, ListMusic, MessageCircle, Trash2, Send,
+  Plus,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getAnimeById, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
@@ -22,7 +22,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [profile, setProfile] = useState<any>(null)
   const [collection, setCollection] = useState<any[]>([])
-  const [friendship, setFriendship] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isCurrentUser, setIsCurrentUser] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -91,68 +90,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       setCollection(collectionData || [])
       setPlaylists(playlistsData || [])
       setComments(commentsData || [])
-
-      if (currentUser && currentUser.id !== params.id) {
-        const { data: friendshipData } = await supabase
-          .from('friendships')
-          .select('*')
-          .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${params.id}),and(user_id.eq.${params.id},friend_id.eq.${currentUser.id})`)
-          .single()
-
-        setFriendship(friendshipData)
-      }
     } catch (error) {
       console.error('Ошибка при загрузке профиля:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSendFriendRequest = async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('Вы не авторизованы')
-
-      const { error } = await supabase.from('friendships').insert({
-        user_id: currentUser.id,
-        friend_id: params.id,
-        status: 'pending',
-      })
-
-      if (error) throw error
-
-      setFriendship({
-        id: '', user_id: currentUser.id, friend_id: params.id,
-        status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-      })
-    } catch (error) {
-      console.error('Ошибка при отправке заявки:', error)
-    }
-  }
-
-  const handleAcceptFriendRequest = async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('Вы не авторизованы')
-
-      const { data: fresh } = await supabase
-        .from('friendships')
-        .select('id')
-        .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${params.id}),and(user_id.eq.${params.id},friend_id.eq.${currentUser.id})`)
-        .eq('status', 'pending')
-        .maybeSingle()
-
-      if (!fresh) throw new Error('Заявка не найдена или нет прав')
-
-      const { error } = await supabase
-        .from('friendships')
-        .update({ status: 'accepted', updated_at: new Date().toISOString() })
-        .eq('id', fresh.id)
-
-      if (error) throw error
-      loadProfile()
-    } catch (error) {
-      console.error('Ошибка при принятии заявки:', error)
     }
   }
 
@@ -355,26 +296,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                     <Button variant="outline" size="sm" onClick={() => router.push('/profile/settings')}>
                       <User className="h-4 w-4 mr-2" /> Настройки
                     </Button>
-                  ) : friendship?.status === 'accepted' ? (
-                    <>
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/chat/${params.id}`)}>
-                        <MessageSquare className="h-4 w-4 mr-2" /> Написать
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Share2 className="h-4 w-4 mr-2" /> Поделиться
-                      </Button>
-                    </>
-                  ) : friendship?.status === 'pending' ? (
-                    friendship.user_id === params.id ? (
-                      <Button size="sm" onClick={handleAcceptFriendRequest}>
-                        Принять заявку
-                      </Button>
-                    ) : (
-                      <Badge variant="secondary">Заявка отправлена</Badge>
-                    )
                   ) : (
-                    <Button size="sm" onClick={handleSendFriendRequest}>
-                      <UserPlus className="h-4 w-4 mr-2" /> Добавить в друзья
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/chat/${params.id}`)}>
+                      <MessageSquare className="h-4 w-4 mr-2" /> Написать
                     </Button>
                   )}
                 </div>

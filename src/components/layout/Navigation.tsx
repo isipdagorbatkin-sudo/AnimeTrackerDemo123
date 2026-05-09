@@ -9,7 +9,6 @@ import {
   Home,
   BookOpen,
   Search,
-  Users,
   MessageSquare,
   Sparkles,
   ChevronLeft,
@@ -21,7 +20,6 @@ const navItems = [
   { href: '/dashboard', label: 'Дашборд', icon: Sparkles },
   { href: '/collection', label: 'Коллекция', icon: BookOpen },
   { href: '/search', label: 'Поиск', icon: Search },
-  { href: '/friends', label: 'Друзья', icon: Users },
   { href: '/chat', label: 'Сообщения', icon: MessageSquare },
 ]
 

@@ -5,31 +5,26 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { MessageSquare, Loader2, Sparkles } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { MessageSquare, Loader2, Sparkles, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface ChatPreview {
-  friendId: string
-  friend: { id: string; username: string; avatar_url: string | null }
+  userId: string
+  user: { id: string; username: string; avatar_url: string | null }
   lastMessage?: string
   lastMessageTime?: string
   unreadCount: number
 }
 
-type FriendshipRow = {
-  friend_id: string
-  friend: { id: string; username: string; avatar_url: string | null }
-}
-
-type MessageRow = {
-  content: string
-  created_at: string
-}
-
 export default function ChatPage() {
   const router = useRouter()
   const [chats, setChats] = useState<ChatPreview[]>([])
+  const [allUsers, setAllUsers] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -38,10 +33,10 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!mounted) return
-    loadChats()
+    loadData()
   }, [mounted])
 
-  const loadChats = async () => {
+  const loadData = async () => {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -51,68 +46,58 @@ export default function ChatPage() {
         return
       }
 
-      const [{ data: friendshipsAsUser }, { data: friendshipsAsFriend }] = await Promise.all([
-        supabase.from('friendships').select('*, friend:profiles!friendships_friend_id_fkey(*)').eq('user_id', user.id).eq('status', 'accepted'),
-        supabase.from('friendships').select('*, user:profiles!friendships_user_id_fkey(*)').eq('friend_id', user.id).eq('status', 'accepted'),
+      setCurrentUserId(user.id)
+
+      const [{ data: profiles }, { data: messages }] = await Promise.all([
+        supabase.from('profiles').select('*').order('username', { ascending: true }),
+        supabase.from('messages').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false }),
       ])
 
-      const allFriendships = [
-        ...(friendshipsAsUser || []).map(f => ({ friend_id: f.friend_id, friend: f.friend })),
-        ...(friendshipsAsFriend || []).map(f => ({ friend_id: f.user_id, friend: f.user })),
-      ] as FriendshipRow[]
+      setAllUsers((profiles || []).filter(p => p.id !== user.id))
 
-      const acceptedFriendships = allFriendships
+      const partnerMap = new Map<string, { lastMessage: string; lastTime: string }>()
+      const unreadMap = new Map<string, number>()
 
-      if (acceptedFriendships.length === 0) {
-        setChats([])
-        setLoading(false)
-        return
+      for (const msg of (messages || [])) {
+        const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
+        if (!partnerMap.has(partnerId)) {
+          partnerMap.set(partnerId, { lastMessage: msg.content, lastTime: msg.created_at })
+        }
+        if (msg.receiver_id === user.id && !msg.read_at) {
+          unreadMap.set(partnerId, (unreadMap.get(partnerId) || 0) + 1)
+        }
       }
 
-      const chatPreviews: ChatPreview[] = await Promise.all(
-        acceptedFriendships.map(async (friendship) => {
-          const { data: messages } = await supabase
-            .from('messages')
-            .select('*')
-            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friendship.friend_id}),and(sender_id.eq.${friendship.friend_id},receiver_id.eq.${user.id})`)
-            .order('created_at', { ascending: false })
-            .limit(1)
+      const chatList: ChatPreview[] = []
+      for (const [userId, meta] of partnerMap) {
+        const profile = profiles?.find(p => p.id === userId)
+        if (profile) {
+          chatList.push({
+            userId,
+            user: { id: userId, username: profile.username, avatar_url: profile.avatar_url },
+            lastMessage: meta.lastMessage,
+            lastMessageTime: meta.lastTime,
+            unreadCount: unreadMap.get(userId) || 0,
+          })
+        }
+      }
 
-          const recentMessages = (messages ?? []) as MessageRow[]
-
-          const { count: unreadCount } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('sender_id', friendship.friend_id)
-            .eq('receiver_id', user.id)
-            .is('read_at', null)
-
-          return {
-            friendId: friendship.friend_id,
-            friend: friendship.friend,
-            lastMessage: recentMessages.length > 0 ? recentMessages[0].content : undefined,
-            lastMessageTime: recentMessages.length > 0 ? recentMessages[0].created_at : undefined,
-            unreadCount: unreadCount || 0,
-          }
-        })
-      )
-
-      chatPreviews.sort((a, b) => {
+      chatList.sort((a, b) => {
         if (!a.lastMessageTime) return 1
         if (!b.lastMessageTime) return -1
         return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
       })
 
-      setChats(chatPreviews)
+      setChats(chatList)
     } catch (error) {
-      console.error('Ошибка при загрузке чатов:', error)
-      setChats([])
+      console.error('Ошибка при загрузке:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name || typeof name !== 'string') return '?'
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
@@ -131,18 +116,11 @@ export default function ChatPage() {
     return date.toLocaleDateString('ru-RU')
   }
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="relative">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
-        </div>
-      </div>
-    )
-  }
+  const filteredUsers = allUsers.filter(p =>
+    p.username.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="relative">
@@ -162,73 +140,129 @@ export default function ChatPage() {
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Чаты
+              Сообщения
             </h1>
             <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
           </div>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Общайтесь с друзьями
+            Общайтесь с любым пользователем
           </p>
         </div>
       </section>
 
       <section className="px-4 pb-16">
         <div className="container mx-auto max-w-3xl">
-          {chats.length === 0 ? (
-            <div className="text-center py-32">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/20 mb-6">
-                <MessageSquare className="h-10 w-10 text-primary" />
-              </div>
-              <p className="text-muted-foreground text-xl mb-4">
-                У вас пока нет чатов. Добавьте друзей и начните общение!
-              </p>
-              <button
-                onClick={() => router.push('/friends')}
-                className="text-primary hover:text-primary/80 underline transition-colors"
-              >
-                Перейти к друзьям
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {chats.map((chat) => (
-                <Card
-                  key={chat.friendId}
-                  className="glass cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                  onClick={() => router.push(`/chat/${chat.friendId}`)}
-                >
-                  <CardContent className="py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={chat.friend.avatar_url || undefined} />
-                          <AvatarFallback>{getInitials(chat.friend.username)}</AvatarFallback>
-                        </Avatar>
-                        {chat.unreadCount > 0 && (
-                          <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
-                            {chat.unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium truncate">{chat.friend.username}</p>
-                          {chat.lastMessageTime && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {formatTime(chat.lastMessageTime)}
-                            </span>
-                          )}
+          <Tabs defaultValue="chats">
+            <TabsList className="bg-input border h-auto mb-6">
+              <TabsTrigger value="chats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                Чаты ({chats.length})
+              </TabsTrigger>
+              <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                Пользователи ({allUsers.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="chats">
+              {chats.length === 0 ? (
+                <div className="text-center py-32">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/20 mb-6">
+                    <MessageSquare className="h-10 w-10 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground text-xl mb-4">
+                    У вас пока нет чатов. Найдите пользователя и напишите ему!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {chats.map((chat) => (
+                    <Card
+                      key={chat.userId}
+                      className="glass cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                      onClick={() => router.push(`/chat/${chat.userId}`)}
+                    >
+                      <CardContent className="py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Avatar>
+                              <AvatarImage src={chat.user.avatar_url || undefined} />
+                              <AvatarFallback>{getInitials(chat.user.username)}</AvatarFallback>
+                            </Avatar>
+                            {chat.unreadCount > 0 && (
+                              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
+                                {chat.unreadCount}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="font-medium truncate">{chat.user.username}</p>
+                              {chat.lastMessageTime && (
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  {formatTime(chat.lastMessageTime)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {chat.lastMessage || 'Нет сообщений'}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {chat.lastMessage || 'Нет сообщений'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="users">
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Поиск пользователей..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-input border h-12 pl-12"
+                  />
+                </div>
+              </div>
+
+              {filteredUsers.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-muted-foreground text-lg">
+                    {searchQuery ? 'Пользователи не найдены' : 'Нет зарегистрированных пользователей'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredUsers.map((profile) => (
+                    <Card
+                      key={profile.id}
+                      className="glass cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                      onClick={() => router.push(`/chat/${profile.id}`)}
+                    >
+                      <CardContent className="py-4">
+                        <div className="flex items-center gap-4">
+                          <Avatar>
+                            <AvatarImage src={profile.avatar_url || undefined} />
+                            <AvatarFallback>{getInitials(profile.username)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{profile.username}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
+                            </p>
+                          </div>
+                          <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
     </div>
