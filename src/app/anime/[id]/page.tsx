@@ -65,7 +65,8 @@ export default function AnimePage() {
             const res = await searchKodik(t)
             if (res.length > 0) {
               setKodikResults(res)
-              setSelectedKodik(res[0])
+              const voice = res.find(r => r.translation.type === 'voice')
+              setSelectedKodik(voice || res[0])
               break
             }
           }
@@ -358,40 +359,20 @@ export default function AnimePage() {
             )}
           </div>
 
-          {kodikResults.length > 0 && (
+          {selectedKodik && (
             <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <PlayCircle className="h-5 w-5 text-primary" />
                 Смотреть
               </h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {kodikResults.map((r, i) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedKodik(r)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      selectedKodik?.id === r.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card/50 border border-border/30 hover:border-primary/40'
-                    }`}
-                  >
-                    {r.translation.title}
-                    <span className="text-xs ml-1 opacity-70">
-                      ({r.translation.type === 'voice' ? 'озвучка' : 'субтитры'})
-                    </span>
-                  </button>
-                ))}
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
+                <iframe
+                  src={getEmbedLink(selectedKodik)}
+                  className="absolute inset-0 w-full h-full"
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                />
               </div>
-              {selectedKodik && (
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
-                  <iframe
-                    src={getEmbedLink(selectedKodik)}
-                    className="absolute inset-0 w-full h-full"
-                    allow="autoplay; fullscreen"
-                    allowFullScreen
-                  />
-                </div>
-              )}
             </div>
           )}
 
