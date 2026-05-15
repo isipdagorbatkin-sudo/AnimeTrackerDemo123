@@ -40,7 +40,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
-  const title = anime.title.english || anime.title.romaji || anime.title.native || 'Без названия'
+  const title = anime.title.romaji || anime.title.english || anime.title.native || 'Без названия'
   const rawImageUrl = getCoverImage(anime)
   const imageUrl = getProxiedImageUrl(rawImageUrl)
   const year = anime.startDate?.year

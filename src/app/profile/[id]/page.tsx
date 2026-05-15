@@ -325,7 +325,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Любимое аниме</p>
                       <p className="text-base font-medium truncate">
-                        {favoriteAnime.title?.english || favoriteAnime.title?.romaji || favoriteAnime.title?.native}
+                        {favoriteAnime.title?.romaji || favoriteAnime.title?.english || favoriteAnime.title?.native}
                       </p>
                     </div>
                   </div>
@@ -611,7 +611,7 @@ function CollectionList({
     <div className="grid gap-4">
       {items.map((item) => {
         const anime = animeCache[item.anime_id]
-        const title = anime?.title?.english || anime?.title?.romaji || anime?.title?.native || 'Загрузка...'
+const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
         const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
 
         return (
@@ -727,7 +727,7 @@ function PlaylistItemCard({ item }: { item: any }) {
     getAnimeById(item.anime_id).then(setAnime)
   }, [item.anime_id])
 
-  const title = anime?.title?.english || anime?.title?.romaji || anime?.title?.native || 'Загрузка...'
+  const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
   const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
 
   return (

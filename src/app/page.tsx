@@ -299,8 +299,9 @@ export default function HomePage() {
   const handleGuess = () => {
     if (!guessAnime) return
     const guess = guessInput.trim().toLowerCase()
-    const correctTitle = (guessAnime.title.english || guessAnime.title.romaji || guessAnime.title.native || '').toLowerCase()
-    if (guess === correctTitle) {
+    const correctEnglish = (guessAnime.title.english || '').toLowerCase()
+const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
+    if (guess === correctRomaji || guess === correctEnglish) {
       const points = Math.max(10 - usedHints * 2, 1)
       setGuessScore(s => s + points)
       setGuessMessage(`✅ Правильно! +${points} очков`)
@@ -323,7 +324,7 @@ export default function HomePage() {
 
   const handleSkip = () => {
     if (!guessAnime) return
-    const title = guessAnime.title.english || guessAnime.title.romaji || guessAnime.title.native
+    const title = guessAnime.title.romaji || guessAnime.title.english || guessAnime.title.native
     setGuessMessage(`😢 Это было: ${title}`)
     setGuessStep('result')
   }

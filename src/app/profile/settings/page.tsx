@@ -337,7 +337,7 @@ export default function ProfileSettingsPage() {
                         />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{favoriteAnime.title?.english || favoriteAnime.title?.romaji || favoriteAnime.title?.native}</p>
+                        <p className="text-sm font-medium truncate">{favoriteAnime.title?.romaji || favoriteAnime.title?.english || favoriteAnime.title?.native}</p>
                         <p className="text-xs text-muted-foreground">{favoriteAnime.meanScore ? (favoriteAnime.meanScore / 10).toFixed(1) : ''}</p>
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleRemoveFavorite}>
@@ -371,7 +371,7 @@ export default function ProfileSettingsPage() {
                           <div className="mt-2 border border-border rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                             {searchResults.map((anime) => {
                               const img = getCoverImage(anime)
-                              const title = anime.title?.english || anime.title?.romaji || anime.title?.native
+                              const title = anime.title?.romaji || anime.title?.english || anime.title?.native
                               const score = anime.meanScore || anime.averageScore || 0
                               return (
                                 <button

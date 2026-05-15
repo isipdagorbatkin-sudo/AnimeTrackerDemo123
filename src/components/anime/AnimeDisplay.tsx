@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AniListAnime, getAnimeById, getCoverImage } from '@/lib/anilist/client'
+import { getAnimeById as getShikimoriAnimeById, getFullImageUrl as getShikimoriImageUrl } from '@/lib/shikimori/client'
 import { Badge } from '@/components/ui/badge'
 import { Star, Calendar, PlayCircle, Loader2, Image as ImageIcon } from 'lucide-react'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
@@ -15,7 +16,7 @@ interface AnimeDisplayProps {
 function convertAniListToDisplay(anime: AniListAnime) {
   return {
     id: anime.id,
-    title: anime.title.english || anime.title.romaji || anime.title.native || 'Без названия',
+    title: anime.title.romaji || anime.title.english || anime.title.native || 'Без названия',
     titleJapanese: anime.title.native || '',
     description: anime.description?.replace(/<[^>]*>/g, '') || '',
     imageUrl: getCoverImage(anime),
@@ -44,6 +45,23 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
         const data = await getAnimeById(animeId)
         if (data) {
           setAnime(convertAniListToDisplay(data))
+          return
+        }
+
+        const shikiData = await getShikimoriAnimeById(animeId)
+        if (shikiData) {
+          setAnime({
+            id: shikiData.mal_id || shikiData.id,
+            title: shikiData.russian || shikiData.name || 'Без названия',
+            titleJapanese: shikiData.japanese?.[0] || '',
+            description: shikiData.synopsis || shikiData.description_html?.replace(/<[^>]*>/g, '') || '',
+            imageUrl: shikiData.image?.original ? (shikiData.image.original.startsWith('/') ? `https://shikimori.one${shikiData.image.original}` : shikiData.image.original) : '',
+            genres: (shikiData.genres || []).map(g => g.russian || g.name),
+            score: shikiData.score || 0,
+            episodes: shikiData.episodes || 0,
+            status: shikiData.status,
+            year: shikiData.aired_on ? new Date(shikiData.aired_on).getFullYear() : 0,
+          })
           return
         }
       } catch (err: any) {

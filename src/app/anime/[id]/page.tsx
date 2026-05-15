@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
-  getAnimeById,
+  getAnimeById as getAniListAnimeById,
   getAnimeCharacters,
   getSimilarAnime,
   getAnimeRelations,
@@ -13,6 +13,7 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
+import { getAnimeById as getShikimoriAnimeById, getFullImageUrl as getShikimoriImageUrl, getStatusText as getShikiStatusText, getTypeText as getShikiTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,14 +50,43 @@ export default function AnimePage() {
     const loadAnime = async () => {
       try {
         setLoading(true)
-        const data = await getAnimeById(animeId)
+        let data = await getAniListAnimeById(animeId)
         if (data) {
           setAnime(data)
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
         } else {
-          setError('Аниме не найдено')
+          const shikiData = await getShikimoriAnimeById(animeId)
+          if (shikiData) {
+            setAnime({
+              id: shikiData.id,
+              idMal: shikiData.mal_id,
+              title: { romaji: shikiData.name || '', english: shikiData.english?.[0] || null, native: shikiData.japanese?.[0] || null },
+              description: shikiData.synopsis || shikiData.description_html || null,
+              coverImage: { extraLarge: '', large: '', medium: '' },
+              bannerImage: null,
+              genres: (shikiData.genres || []).map(g => g.name),
+              averageScore: shikiData.score ? shikiData.score * 10 : null,
+              meanScore: shikiData.score ? shikiData.score * 10 : null,
+              episodes: shikiData.episodes || null,
+              duration: null,
+              status: shikiData.status || '',
+              type: shikiData.kind || '',
+              format: '',
+              season: null,
+              seasonYear: shikiData.aired_on ? new Date(shikiData.aired_on).getFullYear() : null,
+              startDate: shikiData.aired_on ? { year: new Date(shikiData.aired_on).getFullYear(), month: null, day: null } : { year: null, month: null, day: null },
+              endDate: { year: null, month: null, day: null },
+              source: null,
+              studios: { nodes: [] },
+              trailer: null,
+              tags: [],
+              rankings: [],
+            })
+          } else {
+            setError('Аниме не найдено')
+          }
         }
         checkInCollection(animeId)
       } catch (err: any) {
@@ -95,7 +125,7 @@ export default function AnimePage() {
     }
   }
 
-  const title = anime?.title?.english || anime?.title?.romaji || anime?.title?.native || 'Без названия'
+  const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
   const nativeTitle = anime?.title?.native || ''
   const year = anime?.startDate?.year
   const description = anime?.description?.replace(/<[^>]+>/g, '') || ''
@@ -357,7 +387,7 @@ export default function AnimePage() {
                     <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                       {groupItems.map((rel) => {
                         const a = rel.node
-                        const relTitle = a.title?.english || a.title?.romaji || a.title?.native || ''
+                        const relTitle = a.title?.romaji || a.title?.english || a.title?.native || ''
                         const relImage = getProxiedImageUrl(getCoverImage(a))
                         return (
                           <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 group">
@@ -393,7 +423,7 @@ export default function AnimePage() {
               </h3>
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {similar.map((a) => {
-                  const simTitle = a.title?.english || a.title?.romaji || a.title?.native || ''
+                  const simTitle = a.title?.romaji || a.title?.english || a.title?.native || ''
                   const simImage = getProxiedImageUrl(getCoverImage(a))
                   return (
                     <Link key={a.id} href={`/anime/${a.id}`} className="flex-shrink-0 w-24 sm:w-28 group">
