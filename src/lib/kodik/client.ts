@@ -1,9 +1,7 @@
-const KODIK_API_BASE = 'https://kodik-api.com'
+const KODIK_TOKEN = '56a768d08f43091901c44b54fe970049'
+const KODIK_API = 'https://kodik-api.com/search'
 
-// Получаем токен из документации (общедоступный)
-const KODIK_TOKEN = '447d179e875efe44217f20d1ee2146be'
-
-export interface KodikAnime {
+export interface KodikResult {
   id: string
   type: string
   link: string
@@ -11,70 +9,48 @@ export interface KodikAnime {
   title_orig: string
   other_title: string
   year: number
-  screenshots: string[]
-  shikimori_id?: string
-  kinopoisk_id?: string
-  imdb_id?: string
-  quality?: string
+  shikimori_id: string
+  translation: {
+    id: number
+    title: string
+    type: 'voice' | 'subtitles'
+  }
   episodes_count?: number
   last_season?: number
   last_episode?: number
-  translation?: {
-    id: number
-    title: string
-    type: string
+  seasons?: Record<string, {
+    link: string
+    episodes: Record<string, { link: string; title: string }>
+  }>
+  material_data?: {
+    description: string
+    poster_url: string
+    anime_genres: string[]
+    anime_status: string
+    anime_kind: string
+    year: number
+    duration: number
+    imdb_rating: number
+    shikimori_rating: number
+    kinopoisk_rating: number
+    episodes_total: number
+    episodes_aired: number
   }
 }
 
-export interface KodikSearchResponse {
-  time: string
-  total: number
-  results: KodikAnime[]
-}
-
-export async function searchAnime(query: string, limit: number = 20): Promise<KodikSearchResponse> {
+export async function searchKodik(title: string): Promise<KodikResult[]> {
   try {
-    const response = await fetch(
-      `${KODIK_API_BASE}/search?token=${KODIK_TOKEN}&title=${encodeURIComponent(query)}&types=anime,anime-serial&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Kodik API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log('Kodik search response:', data)
-
-    return data
-  } catch (error) {
-    console.error('Error in searchAnime:', error)
-    throw error
+    const res = await fetch(`${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true&with_seasons=true&with_episodes=true`, {
+      method: 'POST',
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.results || []
+  } catch {
+    return []
   }
 }
 
-export function convertToJikanFormat(anime: KodikAnime): any {
-  return {
-    mal_id: parseInt(anime.id.replace(/\D/g, '')) || parseInt(anime.id),
-    title: anime.title,
-    title_japanese: anime.title_orig,
-    synopsis: null,
-    images: {
-      jpg: {
-        large_image_url: anime.screenshots[0] || '',
-        image_url: anime.screenshots[0] || '',
-      },
-    },
-    genres: [],
-    score: null,
-    episodes: anime.episodes_count,
-    status: anime.last_season && anime.last_episode ? 'completed' : 'ongoing',
-    type: anime.type === 'anime' ? 'movie' : 'tv',
-    year: anime.year,
-  }
+export function getEmbedLink(result: KodikResult): string {
+  return `https:${result.link}`
 }
