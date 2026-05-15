@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AniListAnime, getFormatText, getCoverImage } from '@/lib/anilist/client'
+import { useRussianTitle } from '@/lib/russian-cache'
 import { Button } from '@/components/ui/button'
 import { Plus, Star, Calendar, PlayCircle, Share2, Image as ImageIcon, Clock, Check } from 'lucide-react'
 import { AddToCollectionDialog } from './AddToCollectionDialog'
@@ -39,8 +40,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-
-  const title = anime.title.romaji || anime.title.english || anime.title.native || 'Без названия'
+  const title = useRussianTitle(anime)
   const rawImageUrl = getCoverImage(anime)
   const imageUrl = getProxiedImageUrl(rawImageUrl)
   const year = anime.startDate?.year

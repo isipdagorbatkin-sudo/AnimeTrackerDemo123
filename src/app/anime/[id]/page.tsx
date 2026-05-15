@@ -13,7 +13,7 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
-import { getAnimeById as getShikimoriAnimeById, getFullImageUrl as getShikimoriImageUrl, getStatusText as getShikiStatusText, getTypeText as getShikiTypeText, ShikimoriAnime } from '@/lib/shikimori/client'
+import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian-cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,7 @@ export default function AnimePage() {
   const [similar, setSimilar] = useState<AniListAnime[]>([])
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
+  const [russianDescription, setRussianDescription] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -50,43 +51,20 @@ export default function AnimePage() {
     const loadAnime = async () => {
       try {
         setLoading(true)
-        let data = await getAniListAnimeById(animeId)
+        const data = await getAniListAnimeById(animeId)
         if (data) {
           setAnime(data)
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
-        } else {
-          const shikiData = await getShikimoriAnimeById(animeId)
-          if (shikiData) {
-            setAnime({
-              id: shikiData.id,
-              idMal: shikiData.mal_id,
-              title: { romaji: shikiData.name || '', english: shikiData.english?.[0] || null, native: shikiData.japanese?.[0] || null },
-              description: shikiData.synopsis || shikiData.description_html || null,
-              coverImage: { extraLarge: '', large: '', medium: '' },
-              bannerImage: null,
-              genres: (shikiData.genres || []).map(g => g.name),
-              averageScore: shikiData.score ? shikiData.score * 10 : null,
-              meanScore: shikiData.score ? shikiData.score * 10 : null,
-              episodes: shikiData.episodes || null,
-              duration: null,
-              status: shikiData.status || '',
-              type: shikiData.kind || '',
-              format: '',
-              season: null,
-              seasonYear: shikiData.aired_on ? new Date(shikiData.aired_on).getFullYear() : null,
-              startDate: shikiData.aired_on ? { year: new Date(shikiData.aired_on).getFullYear(), month: null, day: null } : { year: null, month: null, day: null },
-              endDate: { year: null, month: null, day: null },
-              source: null,
-              studios: { nodes: [] },
-              trailer: null,
-              tags: [],
-              rankings: [],
+          if (data.idMal) {
+            fetchRussianText(data.idMal).then(() => {
+              const cached = getRussianText(data.idMal)
+              if (cached?.description) setRussianDescription(cached.description)
             })
-          } else {
-            setError('Аниме не найдено')
           }
+        } else {
+          setError('Аниме не найдено')
         }
         checkInCollection(animeId)
       } catch (err: any) {
@@ -125,10 +103,10 @@ export default function AnimePage() {
     }
   }
 
-  const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
+  const title = useRussianTitle(anime)
   const nativeTitle = anime?.title?.native || ''
   const year = anime?.startDate?.year
-  const description = anime?.description?.replace(/<[^>]+>/g, '') || ''
+  const description = russianDescription || anime?.description?.replace(/<[^>]+>/g, '') || ''
   const score = anime?.meanScore || anime?.averageScore || 0
 
   if (!mounted) {

@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { getAnimeById, getCoverImage, AniListAnime } from '@/lib/anilist/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
+import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian-cache'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -36,6 +37,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
   const [creatingPlaylist, setCreatingPlaylist] = useState(false)
   const supabase = createClient()
+  const favTitle = useRussianTitle(favoriteAnime)
 
   useEffect(() => {
     setMounted(true)
@@ -66,7 +68,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       setIsCurrentUser(currentUser?.id === params.id)
 
       if (profileData.favorite_anime_id) {
-        getAnimeById(profileData.favorite_anime_id).then(setFavoriteAnime)
+        getAnimeById(profileData.favorite_anime_id).then(data => {
+          setFavoriteAnime(data)
+          if (data?.idMal) fetchRussianText(data.idMal)
+        })
       }
 
       const [collectionResult, playlistsResult, commentsResult] = await Promise.all([
@@ -325,7 +330,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Любимое аниме</p>
                       <p className="text-base font-medium truncate">
-                        {favoriteAnime.title?.romaji || favoriteAnime.title?.english || favoriteAnime.title?.native}
+                        {favTitle}
                       </p>
                     </div>
                   </div>
@@ -594,6 +599,7 @@ function CollectionList({
       if (!animeCache[id]) {
         getAnimeById(id).then(data => {
           setAnimeCache(prev => ({ ...prev, [id]: data }))
+          if (data?.idMal) fetchRussianText(data.idMal)
         })
       }
     })
@@ -724,10 +730,14 @@ function PlaylistItemCard({ item }: { item: any }) {
   const [anime, setAnime] = useState<AniListAnime | null>(null)
 
   useEffect(() => {
-    getAnimeById(item.anime_id).then(setAnime)
+    getAnimeById(item.anime_id).then(data => {
+      setAnime(data)
+      if (data?.idMal) fetchRussianText(data.idMal)
+    })
   }, [item.anime_id])
 
-  const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
+const ru = anime?.idMal ? getRussianText(anime.idMal)?.title : ''
+const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
   const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
 
   return (

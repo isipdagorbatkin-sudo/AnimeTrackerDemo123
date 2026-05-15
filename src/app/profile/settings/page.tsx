@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { searchAnime, getAnimeById, getCoverImage, AniListAnime } from '@/lib/anilist/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
+import { useRussianTitle, getRussianText, fetchRussianText } from '@/lib/russian-cache'
 import { User, Camera, Save, Loader2, Sparkles, MapPin, Quote, Image, Heart, Search, X, Globe, Film, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -34,6 +35,7 @@ export default function ProfileSettingsPage() {
   const [searching, setSearching] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const supabase = createClient()
+  const favTitle = useRussianTitle(favoriteAnime)
 
   useEffect(() => {
     setMounted(true)
@@ -53,7 +55,9 @@ export default function ProfileSettingsPage() {
       setSearching(true)
       try {
         const result = await searchAnime(searchQuery, 1, 10)
-        setSearchResults(result.Page?.media || [])
+        const media = result.Page?.media || []
+        setSearchResults(media)
+        media.forEach(a => { if (a.idMal) fetchRussianText(a.idMal) })
       } catch {
         setSearchResults([])
       } finally {
@@ -89,7 +93,10 @@ export default function ProfileSettingsPage() {
       setFavoriteAnimeId(data.favorite_anime_id)
 
       if (data.favorite_anime_id) {
-        getAnimeById(data.favorite_anime_id).then(setFavoriteAnime)
+        getAnimeById(data.favorite_anime_id).then(anime => {
+          setFavoriteAnime(anime)
+          if (anime?.idMal) fetchRussianText(anime.idMal)
+        })
       }
     } catch (err: any) {
       setError(err.message || 'Ошибка при загрузке профиля')
@@ -135,6 +142,7 @@ export default function ProfileSettingsPage() {
   const handleSelectFavorite = (anime: AniListAnime) => {
     setFavoriteAnimeId(anime.id)
     setFavoriteAnime(anime)
+    if (anime.idMal) fetchRussianText(anime.idMal)
     setShowSearch(false)
     setSearchQuery('')
     setSearchResults([])
@@ -337,7 +345,7 @@ export default function ProfileSettingsPage() {
                         />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{favoriteAnime.title?.romaji || favoriteAnime.title?.english || favoriteAnime.title?.native}</p>
+                        <p className="text-sm font-medium truncate">{favTitle}</p>
                         <p className="text-xs text-muted-foreground">{favoriteAnime.meanScore ? (favoriteAnime.meanScore / 10).toFixed(1) : ''}</p>
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleRemoveFavorite}>
@@ -371,7 +379,8 @@ export default function ProfileSettingsPage() {
                           <div className="mt-2 border border-border rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                             {searchResults.map((anime) => {
                               const img = getCoverImage(anime)
-                              const title = anime.title?.romaji || anime.title?.english || anime.title?.native
+                              const ru = anime.idMal ? getRussianText(anime.idMal)?.title : ''
+                              const title = ru || anime.title?.romaji || anime.title?.english || anime.title?.native
                               const score = anime.meanScore || anime.averageScore || 0
                               return (
                                 <button
