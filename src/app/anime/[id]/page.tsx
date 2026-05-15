@@ -58,7 +58,7 @@ export default function AnimePage() {
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
           if (data.idMal) {
-            fetchRussianText(data.idMal).then(() => {
+            fetchRussianText(data.idMal, data.title?.romaji).then(() => {
               const cached = getRussianText(data.idMal)
               if (cached?.description) setRussianDescription(cached.description)
             })

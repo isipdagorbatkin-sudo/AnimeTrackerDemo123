@@ -70,7 +70,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       if (profileData.favorite_anime_id) {
         getAnimeById(profileData.favorite_anime_id).then(data => {
           setFavoriteAnime(data)
-          if (data?.idMal) fetchRussianText(data.idMal)
+          if (data?.idMal) fetchRussianText(data.idMal, data.title?.romaji)
         })
       }
 
@@ -599,7 +599,7 @@ function CollectionList({
       if (!animeCache[id]) {
         getAnimeById(id).then(data => {
           setAnimeCache(prev => ({ ...prev, [id]: data }))
-          if (data?.idMal) fetchRussianText(data.idMal)
+          if (data?.idMal) fetchRussianText(data.idMal, data.title?.romaji)
         })
       }
     })
@@ -732,7 +732,7 @@ function PlaylistItemCard({ item }: { item: any }) {
   useEffect(() => {
     getAnimeById(item.anime_id).then(data => {
       setAnime(data)
-      if (data?.idMal) fetchRussianText(data.idMal)
+      if (data?.idMal) fetchRussianText(data.idMal, data.title?.romaji)
     })
   }, [item.anime_id])
 

@@ -57,7 +57,7 @@ export default function ProfileSettingsPage() {
         const result = await searchAnime(searchQuery, 1, 10)
         const media = result.Page?.media || []
         setSearchResults(media)
-        media.forEach(a => { if (a.idMal) fetchRussianText(a.idMal) })
+        media.forEach(a => { if (a.idMal) fetchRussianText(a.idMal, a.title?.romaji) })
       } catch {
         setSearchResults([])
       } finally {
@@ -95,7 +95,7 @@ export default function ProfileSettingsPage() {
       if (data.favorite_anime_id) {
         getAnimeById(data.favorite_anime_id).then(anime => {
           setFavoriteAnime(anime)
-          if (anime?.idMal) fetchRussianText(anime.idMal)
+          if (anime?.idMal) fetchRussianText(anime.idMal, anime.title?.romaji)
         })
       }
     } catch (err: any) {
@@ -142,7 +142,7 @@ export default function ProfileSettingsPage() {
   const handleSelectFavorite = (anime: AniListAnime) => {
     setFavoriteAnimeId(anime.id)
     setFavoriteAnime(anime)
-    if (anime.idMal) fetchRussianText(anime.idMal)
+    if (anime.idMal) fetchRussianText(anime.idMal, anime.title?.romaji)
     setShowSearch(false)
     setSearchQuery('')
     setSearchResults([])
