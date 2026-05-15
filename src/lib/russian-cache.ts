@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getAnimeByMalId, searchAnime as shikiSearch } from './shikimori/client'
+import { searchAnime as shikiSearch } from './shikimori/client'
 import type { AniListAnime } from './anilist/client'
 
 interface RussianText {
@@ -14,22 +14,27 @@ export function getRussianText(idMal: number): RussianText | null {
   return cache.get(idMal) || null
 }
 
-export function fetchRussianText(idMal: number, nameHint?: string): Promise<void> {
+export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string): Promise<void> {
   if (cache.has(idMal)) return Promise.resolve()
   if (pending.has(idMal)) return pending.get(idMal)!
   const promise = (async () => {
     try {
       let shiki: any = null
-      if (nameHint) {
-        const results = await shikiSearch(nameHint, 1, 10)
-        shiki = results.find(a => a.mal_id === idMal) || null
+      const queries = [nameEn, nameJp].filter(Boolean) as string[]
+      for (const q of queries) {
+        try {
+          const results = await shikiSearch(q, 1, 10)
+          shiki = results.find(a => a.mal_id === idMal) || null
+          if (shiki) break
+          shiki = results[0] || null
+          if (shiki) break
+        } catch { }
       }
-      if (!shiki) {
-        shiki = await getAnimeByMalId(idMal)
-        if (shiki && shiki.mal_id !== idMal) shiki = null
-      }
-      if (shiki) {
-        cache.set(idMal, { title: shiki.russian || '', description: (shiki.description_html || shiki.synopsis || '').replace(/<[^>]*>/g, '') })
+      if (shiki && shiki.russian) {
+        cache.set(idMal, {
+          title: shiki.russian,
+          description: (shiki.description_html || shiki.synopsis || '').replace(/<[^>]*>/g, ''),
+        })
       }
     } finally {
       pending.delete(idMal)
@@ -42,17 +47,18 @@ export function fetchRussianText(idMal: number, nameHint?: string): Promise<void
 export function useRussianTitle(anime: AniListAnime | null): string {
   const [russianTitle, setRussianTitle] = useState('')
   const idMal = anime?.idMal
-  const nameHint = anime?.title?.romaji
+  const nameEn = anime?.title?.english
+  const nameJp = anime?.title?.romaji
 
   useEffect(() => {
     if (!idMal) return
     const cached = getRussianText(idMal)
     if (cached) { setRussianTitle(cached.title); return }
-    fetchRussianText(idMal, nameHint).then(() => {
+    fetchRussianText(idMal, nameEn, nameJp).then(() => {
       const r = getRussianText(idMal)
       if (r) setRussianTitle(r.title)
     })
-  }, [idMal, nameHint])
+  }, [idMal, nameEn, nameJp])
 
   return russianTitle || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
 }
