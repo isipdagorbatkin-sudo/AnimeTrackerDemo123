@@ -20,7 +20,7 @@ export interface KodikResult {
   last_episode?: number
   seasons?: Record<string, {
     link: string
-    episodes: Record<string, string>
+    episodes: Record<string, { link: string; title: string }>
   }>
   material_data?: {
     description: string
@@ -52,15 +52,11 @@ export async function searchKodik(title: string): Promise<KodikResult[]> {
 }
 
 export function getEmbedLink(result: KodikResult, season?: string, episode?: string): string {
-  let link: string
   if (season && result.seasons?.[season]) {
     if (episode && result.seasons[season].episodes?.[episode]) {
-      link = result.seasons[season].episodes[episode]
-    } else {
-      link = result.seasons[season].link
+      return `https:${result.seasons[season].episodes[episode].link}`
     }
-  } else {
-    link = result.link
+    return `https:${result.seasons[season].link}`
   }
-  return `https:${link}`
+  return `https:${result.link}`
 }
