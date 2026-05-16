@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'User-Agent': 'AnimeTracker/1.0',
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(30000),

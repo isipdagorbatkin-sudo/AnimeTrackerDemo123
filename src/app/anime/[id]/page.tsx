@@ -64,8 +64,20 @@ export default function AnimePage() {
           for (const t of titles) {
             const res = await searchKodik(t)
             if (res.length > 0) {
-              setKodikResults(res)
-              setSelectedKodik(res[0])
+              const groups = new Map<string, KodikResult[]>()
+              for (const r of res) {
+                const key = r.shikimori_id || r.id
+                if (!groups.has(key)) groups.set(key, [])
+                groups.get(key)!.push(r)
+              }
+              let bestGroup: KodikResult[] = []
+              for (const g of groups.values()) {
+                if (g.length > bestGroup.length) bestGroup = g
+              }
+              if (bestGroup.length > 0) {
+                setKodikResults(bestGroup)
+                setSelectedKodik(bestGroup[0])
+              }
               break
             }
           }

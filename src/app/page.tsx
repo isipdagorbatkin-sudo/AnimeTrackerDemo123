@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
+import { buildSearchCandidates } from '@/lib/search'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 
@@ -215,14 +216,16 @@ export default function HomePage() {
         setLoading(true)
         setError('')
 
-        const result = await searchAnime(normalizedQuery, 1, 20)
-        const results = result.Page?.media || []
-
+        const candidates = buildSearchCandidates(normalizedQuery)
+        const searchResults = await Promise.all(
+          candidates.map(c => searchAnime(c, 1, 20))
+        )
+        const allMedia = searchResults.flatMap(r => r.Page?.media || [])
         if (requestIdRef.current !== requestId) return
 
-        const deduped = dedupeAnime(results)
+        const deduped = dedupeAnime(allMedia)
         setAnimeList(deduped)
-        const searchHasMore = result.Page?.pageInfo?.hasNextPage || false
+        const searchHasMore = searchResults.some(r => r.Page?.pageInfo?.hasNextPage)
         setHasMore(searchHasMore)
         setRemoteSearchQuery(normalizedQuery)
         setCurrentPage(1)
