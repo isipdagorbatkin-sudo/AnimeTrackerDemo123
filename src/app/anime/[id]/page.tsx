@@ -82,8 +82,12 @@ export default function AnimePage() {
             }
           }
           if (data.idMal) {
-            fetchRussianText(data.idMal, data.title?.english, data.title?.romaji).then(() => {
-              const cached = getRussianText(data.idMal)
+            const nameNative = data.title?.native
+            const nameEn = data.title?.english
+            const nameJp = data.title?.romaji
+            fetchRussianText(data.idMal, nameEn, nameJp, nameNative, data.startDate?.year).then(() => {
+              const queryParts = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
+              const cached = getRussianText(data.idMal, queryParts.join('|'))
               if (cached?.description) setRussianDescription(cached.description)
             })
           }

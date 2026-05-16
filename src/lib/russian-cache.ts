@@ -20,14 +20,26 @@ export function getRussianText(idMal: number, title: string): RussianText | null
   return cache.get(cacheKey(idMal, title)) || null
 }
 
-async function fetchKodik(title: string): Promise<{ title: string; description: string } | null> {
+async function fetchKodik(title: string, year?: number | null): Promise<{ title: string; description: string } | null> {
   try {
-    const res = await fetch(`${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=3&with_material_data=true`, {
+    const res = await fetch(`${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true`, {
       method: 'POST',
     })
     if (!res.ok) return null
     const data = await res.json()
     if (!data.results || data.results.length === 0) return null
+
+    if (year) {
+      for (const item of data.results) {
+        if (item.material_data?.year === year) {
+          return {
+            title: item.title || '',
+            description: item.material_data?.description || '',
+          }
+        }
+      }
+    }
+
     const item = data.results[0]
     return {
       title: item.title || '',
@@ -38,15 +50,15 @@ async function fetchKodik(title: string): Promise<{ title: string; description: 
   }
 }
 
-export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string): Promise<void> {
-  const queries = [nameEn, nameJp].filter(Boolean) as string[]
+export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string, nameNative?: string, year?: number | null): Promise<void> {
+  const queries = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
   const key = cacheKey(idMal, queries.join('|'))
   if (cache.has(key)) return Promise.resolve()
   if (pending.has(key)) return pending.get(key)!
   const promise = (async () => {
     try {
       for (const q of queries) {
-        const result = await fetchKodik(q)
+        const result = await fetchKodik(q, year)
         if (result && result.title) {
           cache.set(key, result)
           return
@@ -65,18 +77,20 @@ export function useRussianTitle(anime: AniListAnime | null): string {
   const idMal = anime?.idMal
   const nameEn = anime?.title?.english
   const nameJp = anime?.title?.romaji
+  const nameNative = anime?.title?.native
+  const year = anime?.startDate?.year
 
   useEffect(() => {
-    if (!idMal && !nameEn && !nameJp) return
-    const queries = [nameEn, nameJp].filter(Boolean) as string[]
+    if (!idMal && !nameEn && !nameJp && !nameNative) return
+    const queries = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
     const key = cacheKey(idMal || 0, queries.join('|'))
     const cached = getRussianText(idMal || 0, queries.join('|'))
     if (cached) { setRussianTitle(cached.title); return }
-    fetchRussianText(idMal || 0, nameEn, nameJp).then(() => {
+    fetchRussianText(idMal || 0, nameEn, nameJp, nameNative, year).then(() => {
       const r = getRussianText(idMal || 0, queries.join('|'))
       if (r) setRussianTitle(r.title)
     })
-  }, [idMal, nameEn, nameJp])
+  }, [idMal, nameEn, nameJp, nameNative, year])
 
   return russianTitle || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
 }
