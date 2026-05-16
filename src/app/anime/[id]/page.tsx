@@ -43,8 +43,6 @@ export default function AnimePage() {
   const [russianDescription, setRussianDescription] = useState('')
   const [kodikResults, setKodikResults] = useState<KodikResult[]>([])
   const [selectedKodik, setSelectedKodik] = useState<KodikResult | null>(null)
-  const [selectedEpisode, setSelectedEpisode] = useState('')
-  const [selectedSeason, setSelectedSeason] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -384,7 +382,7 @@ export default function AnimePage() {
                 {kodikResults.map((r, i) => (
                   <button
                     key={r.id}
-                    onClick={() => { setSelectedKodik(r); setSelectedEpisode(''); setSelectedSeason('') }}
+                    onClick={() => setSelectedKodik(r)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       selectedKodik?.id === r.id
                         ? 'bg-primary text-primary-foreground'
@@ -398,69 +396,17 @@ export default function AnimePage() {
                   </button>
                 ))}
               </div>
-              {selectedKodik && (() => {
-                const seasons = selectedKodik.seasons
-                const seasonKeys = seasons ? Object.keys(seasons).sort((a, b) => Number(a) - Number(b)) : []
-                const currentSeason = selectedSeason || seasonKeys[0] || ''
-                const episodes = currentSeason && seasons ? Object.keys(seasons[currentSeason].episodes).sort((a, b) => Number(a) - Number(b)) : []
-                const episodeLink = selectedEpisode && seasons && currentSeason && seasons[currentSeason].episodes[selectedEpisode]
-                  ? seasons[currentSeason].episodes[selectedEpisode].link
-                  : null
-                const iframeSrc = episodeLink
-                  ? getEmbedLink({ ...selectedKodik, link: episodeLink })
-                  : getEmbedLink(selectedKodik)
-                return (
-                  <>
-                    {(seasonKeys.length > 0 || episodes.length > 0) && selectedKodik.seasons && (
-                      <div className="mb-4 space-y-2">
-                        {seasonKeys.length > 1 && (
-                          <div className="flex flex-wrap gap-2">
-                            {seasonKeys.map(s => (
-                              <button
-                                key={s}
-                                onClick={() => { setSelectedSeason(s); setSelectedEpisode('') }}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                  currentSeason === s
-                                    ? 'bg-primary/80 text-primary-foreground'
-                                    : 'bg-card/50 border border-border/30 hover:border-primary/40'
-                                }`}
-                              >
-                                {s} сезон
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {episodes.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                            {episodes.map(e => (
-                              <button
-                                key={e}
-                                onClick={() => setSelectedEpisode(e)}
-                                className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                                  selectedEpisode === e
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-card/50 border border-border/30 hover:border-primary/40'
-                                }`}
-                              >
-                                {e}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
-                      <iframe
-                        src={iframeSrc}
-                        className="absolute inset-0 w-full h-full"
-                        allow="autoplay; fullscreen"
-                        allowFullScreen
-                        sandbox="allow-scripts allow-same-origin"
-                      />
-                    </div>
-                  </>
-                )
-              })()}
+              {selectedKodik && (
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
+                  <iframe
+                    src={getEmbedLink(selectedKodik)}
+                    className="absolute inset-0 w-full h-full"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                </div>
+              )}
             </div>
           )}
 
