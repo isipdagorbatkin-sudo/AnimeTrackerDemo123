@@ -43,27 +43,10 @@ export default function AnimePage() {
   const [russianDescription, setRussianDescription] = useState('')
   const [kodikResults, setKodikResults] = useState<KodikResult[]>([])
   const [selectedKodik, setSelectedKodik] = useState<KodikResult | null>(null)
-  const [selectedSeason, setSelectedSeason] = useState('')
-  const [selectedEpisode, setSelectedEpisode] = useState('')
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    if (!selectedKodik?.seasons) {
-      setSelectedSeason('')
-      setSelectedEpisode('')
-      return
-    }
-    const seasonKeys = Object.keys(selectedKodik.seasons)
-    if (seasonKeys.length === 0) return
-    const defaultSeason = seasonKeys.includes(selectedSeason) ? selectedSeason : seasonKeys[0]
-    setSelectedSeason(defaultSeason)
-    const epKeys = Object.keys(selectedKodik.seasons[defaultSeason].episodes || {})
-    const defaultEp = epKeys.length > 0 ? (epKeys.includes(selectedEpisode) ? selectedEpisode : epKeys[0]) : ''
-    setSelectedEpisode(defaultEp)
-  }, [selectedKodik])
 
   useEffect(() => {
     if (!mounted) return
@@ -382,44 +365,9 @@ export default function AnimePage() {
                 <PlayCircle className="h-5 w-5 text-primary" />
                 Смотреть
               </h3>
-
-              {selectedKodik.seasons && Object.keys(selectedKodik.seasons).length > 1 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {Object.keys(selectedKodik.seasons).map(season => (
-                    <Button
-                      key={season}
-                      variant={selectedSeason === season ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSeason(season)
-                        const epKeys = Object.keys(selectedKodik.seasons?.[season]?.episodes || {})
-                        setSelectedEpisode(epKeys.length > 0 ? epKeys[0] : '')
-                      }}
-                    >
-                      {season} сезон
-                    </Button>
-                  ))}
-                </div>
-              )}
-
-              {selectedSeason && selectedKodik.seasons?.[selectedSeason]?.episodes && (
-                <div className="flex flex-wrap gap-2 mb-4 max-h-32 overflow-y-auto">
-                  {Object.keys(selectedKodik.seasons[selectedSeason].episodes).map(ep => (
-                    <Button
-                      key={ep}
-                      variant={selectedEpisode === ep ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedEpisode(ep)}
-                    >
-                      {ep} серия
-                    </Button>
-                  ))}
-                </div>
-              )}
-
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
                 <iframe
-                  src={getEmbedLink(selectedKodik, selectedSeason, selectedEpisode)}
+                  src={getEmbedLink(selectedKodik)}
                   className="absolute inset-0 w-full h-full"
                   allow="autoplay; fullscreen"
                   allowFullScreen

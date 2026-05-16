@@ -51,12 +51,6 @@ export async function searchKodik(title: string): Promise<KodikResult[]> {
   }
 }
 
-export function getEmbedLink(result: KodikResult, season?: string, episode?: string): string {
-  if (season && result.seasons?.[season]) {
-    if (episode && result.seasons[season].episodes?.[episode]) {
-      return `https:${result.seasons[season].episodes[episode].link}`
-    }
-    return `https:${result.seasons[season].link}`
-  }
+export function getEmbedLink(result: KodikResult): string {
   return `https:${result.link}`
 }
