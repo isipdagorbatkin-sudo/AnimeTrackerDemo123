@@ -20,6 +20,10 @@ export function getRussianText(idMal: number, title: string): RussianText | null
   return cache.get(cacheKey(idMal, title)) || null
 }
 
+export function setRussianCache(idMal: number, key: string, text: RussianText): void {
+  cache.set(cacheKey(idMal, key), text)
+}
+
 async function fetchRussianByShikimori(title: string, idMal: number): Promise<{ title: string; description: string } | null> {
   try {
     const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`)

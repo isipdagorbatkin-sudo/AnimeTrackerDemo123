@@ -13,7 +13,7 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
-import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian-cache'
+import { useRussianTitle, setRussianCache } from '@/lib/russian-cache'
 import { searchKodik, getEmbedLink, KodikResult } from '@/lib/kodik/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -77,19 +77,17 @@ export default function AnimePage() {
               if (bestGroup.length > 0) {
                 setKodikResults(bestGroup)
                 setSelectedKodik(bestGroup[0])
+                const r = bestGroup[0]
+                if (r.title) {
+                  const queryParts = [...new Set([data.title?.native, data.title?.english, data.title?.romaji].filter(Boolean) as string[])]
+                  setRussianCache(data.idMal || 0, queryParts.join('|'), { title: r.title, description: r.material_data?.description || '' })
+                }
+                if (r.material_data?.description) {
+                  setRussianDescription(r.material_data.description)
+                }
               }
               break
             }
-          }
-          if (data.idMal) {
-            const nameNative = data.title?.native
-            const nameEn = data.title?.english
-            const nameJp = data.title?.romaji
-            fetchRussianText(data.idMal, nameEn, nameJp, nameNative, data.startDate?.year).then(() => {
-              const queryParts = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
-              const cached = getRussianText(data.idMal, queryParts.join('|'))
-              if (cached?.description) setRussianDescription(cached.description)
-            })
           }
         } else {
           setError('Аниме не найдено')
