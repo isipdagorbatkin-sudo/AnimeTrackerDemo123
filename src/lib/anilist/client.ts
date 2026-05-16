@@ -1,4 +1,4 @@
-const ANILIST_PROXY = '/api/anilist'
+const ANILIST_API = 'https://graphql.anilist.co'
 
 export interface AniListAnime {
   id: number
@@ -135,25 +135,19 @@ const ANIME_FRAGMENT = `
 `
 
 async function queryAniList<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const controller = new AbortController()
-  const t = setTimeout(() => controller.abort(), 15000)
-  const response = await fetch(ANILIST_PROXY, {
+  const response = await fetch(ANILIST_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'User-Agent': 'AnimeTracker/1.0',
     },
     body: JSON.stringify({ query, variables }),
-    signal: controller.signal,
   })
-  clearTimeout(t)
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err?.message || `AniList API error: ${response.status}`)
-  }
-  if (response.status === 0) {
-    throw new Error('AniList API: network error')
   }
 
   const data = await response.json()
