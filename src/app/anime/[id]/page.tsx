@@ -85,7 +85,7 @@ export default function AnimePage() {
             const nameNative = data.title?.native
             const nameEn = data.title?.english
             const nameJp = data.title?.romaji
-            fetchRussianText(data.idMal, nameEn, nameJp, nameNative, data.startDate?.year, data.episodes).then(() => {
+            fetchRussianText(data.idMal, nameEn, nameJp, nameNative, data.startDate?.year).then(() => {
               const queryParts = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
               const cached = getRussianText(data.idMal, queryParts.join('|'))
               if (cached?.description) setRussianDescription(cached.description)

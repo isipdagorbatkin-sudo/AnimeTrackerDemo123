@@ -20,7 +20,26 @@ export function getRussianText(idMal: number, title: string): RussianText | null
   return cache.get(cacheKey(idMal, title)) || null
 }
 
-async function fetchKodik(title: string, year?: number | null, episodes?: number | null): Promise<{ title: string; description: string } | null> {
+async function fetchRussianByShikimori(title: string, idMal: number): Promise<{ title: string; description: string } | null> {
+  try {
+    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!Array.isArray(data)) return null
+    const match = data.find((a: any) => a.myanimelist_id === idMal)
+    if (match) {
+      return {
+        title: match.russian || '',
+        description: (match.description || '').replace(/<[^>]+>/g, ''),
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function fetchKodik(title: string, year?: number | null): Promise<{ title: string; description: string } | null> {
   try {
     const res = await fetch(`${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true`, {
       method: 'POST',
@@ -30,22 +49,12 @@ async function fetchKodik(title: string, year?: number | null, episodes?: number
     if (!data.results || data.results.length === 0) return null
 
     if (year) {
-      const byYear = data.results.filter((item: any) => item.material_data?.year === year)
-      if (byYear.length > 0) {
-        if (episodes && byYear.length > 1) {
-          const byEpisodes = byYear.filter((item: any) => item.material_data?.episodes_total === episodes)
-          if (byEpisodes.length > 0) {
-            const item = byEpisodes[0]
-            return {
-              title: item.title || '',
-              description: item.material_data?.description || '',
-            }
+      for (const item of data.results) {
+        if (item.material_data?.year === year) {
+          return {
+            title: item.title || '',
+            description: item.material_data?.description || '',
           }
-        }
-        const item = byYear[0]
-        return {
-          title: item.title || '',
-          description: item.material_data?.description || '',
         }
       }
     }
@@ -60,7 +69,7 @@ async function fetchKodik(title: string, year?: number | null, episodes?: number
   }
 }
 
-export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string, nameNative?: string, year?: number | null, episodes?: number | null): Promise<void> {
+export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string, nameNative?: string, year?: number | null): Promise<void> {
   const queries = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
   const key = cacheKey(idMal, queries.join('|'))
   if (cache.has(key)) return Promise.resolve()
@@ -68,7 +77,14 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
   const promise = (async () => {
     try {
       for (const q of queries) {
-        const result = await fetchKodik(q, year, episodes)
+        const result = await fetchRussianByShikimori(q, idMal)
+        if (result && result.title) {
+          cache.set(key, result)
+          return
+        }
+      }
+      for (const q of queries) {
+        const result = await fetchKodik(q, year)
         if (result && result.title) {
           cache.set(key, result)
           return
@@ -89,7 +105,6 @@ export function useRussianTitle(anime: AniListAnime | null): string {
   const nameJp = anime?.title?.romaji
   const nameNative = anime?.title?.native
   const year = anime?.startDate?.year
-  const episodes = anime?.episodes
 
   useEffect(() => {
     if (!idMal && !nameEn && !nameJp && !nameNative) return
@@ -97,11 +112,11 @@ export function useRussianTitle(anime: AniListAnime | null): string {
     const key = cacheKey(idMal || 0, queries.join('|'))
     const cached = getRussianText(idMal || 0, queries.join('|'))
     if (cached) { setRussianTitle(cached.title); return }
-    fetchRussianText(idMal || 0, nameEn, nameJp, nameNative, year, episodes).then(() => {
+    fetchRussianText(idMal || 0, nameEn, nameJp, nameNative, year).then(() => {
       const r = getRussianText(idMal || 0, queries.join('|'))
       if (r) setRussianTitle(r.title)
     })
-  }, [idMal, nameEn, nameJp, nameNative, year, episodes])
+  }, [idMal, nameEn, nameJp, nameNative, year])
 
   return russianTitle || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
 }
