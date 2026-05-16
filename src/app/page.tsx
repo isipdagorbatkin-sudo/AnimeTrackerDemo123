@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
-import { buildSearchCandidates } from '@/lib/search'
+import { searchWithRussian } from '@/lib/search'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 
@@ -216,23 +216,17 @@ export default function HomePage() {
         setLoading(true)
         setError('')
 
-        const candidates = buildSearchCandidates(normalizedQuery)
-        const searchResults = await Promise.all(
-          candidates.map(c => searchAnime(c, 1, 20))
-        )
-        const allMedia = searchResults.flatMap(r => r.Page?.media || [])
+        const result = await searchWithRussian(normalizedQuery, 1, 20)
         if (requestIdRef.current !== requestId) return
 
-        const deduped = dedupeAnime(allMedia)
-        setAnimeList(deduped)
-        const searchHasMore = searchResults.some(r => r.Page?.pageInfo?.hasNextPage)
-        setHasMore(searchHasMore)
+        setAnimeList(result.media)
+        setHasMore(result.hasMore)
         setRemoteSearchQuery(normalizedQuery)
         setCurrentPage(1)
 
         searchCacheRef.current.set(cacheKey, {
-          results: deduped,
-          hasMore: searchHasMore,
+          results: result.media,
+          hasMore: result.hasMore,
           remoteQuery: normalizedQuery,
         })
       } catch (err: any) {

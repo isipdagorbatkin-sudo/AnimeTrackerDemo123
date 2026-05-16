@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AniListAnimeCard } from '@/components/anime/AniListAnimeCard'
-import { AniListAnime, searchAnime } from '@/lib/anilist/client'
-import { buildSearchCandidates } from '@/lib/search'
+import { AniListAnime } from '@/lib/anilist/client'
+import { searchWithRussian } from '@/lib/search'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, Sparkles, ChevronDown, Compass } from 'lucide-react'
@@ -83,26 +83,16 @@ export default function SearchPage() {
         setLoading(true)
         setError('')
 
-        const candidates = buildSearchCandidates(normalizedQuery)
-        const results = await Promise.all(
-          candidates.map(c => searchAnime(c, 1, 5))
-        )
-        const allMedia = results.flatMap(r => r.Page?.media || [])
-        const seen = new Set<number>()
-        const fetched = allMedia.filter(a => {
-          if (seen.has(a.id)) return false
-          seen.add(a.id)
-          return true
-        })
+        const result = await searchWithRussian(normalizedQuery, 1, 5)
         if (requestIdRef.current !== requestId) return
 
-        setResults(fetched)
-        setHasMore(results.some(r => r.Page?.pageInfo?.hasNextPage))
+        setResults(result.media)
+        setHasMore(result.hasMore)
         setRemoteQuery(normalizedQuery)
         setCurrentPage(1)
         searchCacheRef.current.set(cacheKey, {
-          results: fetched,
-          hasMore: results.some(r => r.Page?.pageInfo?.hasNextPage),
+          results: result.media,
+          hasMore: result.hasMore,
           remoteQuery: normalizedQuery,
         })
       } catch (err) {

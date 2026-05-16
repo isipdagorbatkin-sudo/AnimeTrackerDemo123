@@ -61,3 +61,42 @@ export function buildSearchCandidates(query: string): string[] {
   })
   return candidates.length > 0 ? candidates : [cleaned]
 }
+
+import { searchAnime } from './anilist/client'
+import type { AniListAnime } from './anilist/client'
+import { searchKodik } from './kodik/client'
+
+export async function searchWithRussian(query: string, page = 1, perPage = 20): Promise<{ media: AniListAnime[]; hasMore: boolean }> {
+  const candidates = buildSearchCandidates(query)
+  const anilistResults = await Promise.all(
+    candidates.map(c => searchAnime(c, page, perPage).then(r => r.Page?.media || []))
+  )
+  const seen = new Set<number>()
+  const allMedia = anilistResults.flat()
+  const deduped = allMedia.filter(a => {
+    if (seen.has(a.id)) return false
+    seen.add(a.id)
+    return true
+  })
+  const hasMore = deduped.length >= perPage
+
+  if (hasCyrillic(query) || deduped.length < 3) {
+    try {
+      const kodikResults = await searchKodik(query)
+      if (kodikResults.length > 0) {
+        const kodikTitles = [...new Set(kodikResults.map(r => r.title_orig || r.title).filter(Boolean))] as string[]
+        const kodikSearchResults = await Promise.all(
+          kodikTitles.map(t => searchAnime(t, 1, 5).then(r => r.Page?.media || []))
+        )
+        for (const a of kodikSearchResults.flat()) {
+          if (!seen.has(a.id)) {
+            deduped.push(a)
+            seen.add(a.id)
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { media: deduped, hasMore }
+}
