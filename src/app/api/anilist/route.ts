@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
-    if (!response.ok) {
+    if (response.status >= 500) {
       return NextResponse.json(data, {
         status: response.status,
         headers: { 'Access-Control-Allow-Origin': '*' },

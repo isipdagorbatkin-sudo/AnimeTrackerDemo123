@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { AniListAnime } from './anilist/client'
 
-const KODIK_TOKEN = '56a768d08f43091901c44b54fe970049'
-const KODIK_API = 'https://kodik-api.com/search'
-
 interface RussianText {
   title: string
   description: string
@@ -43,36 +40,6 @@ async function fetchRussianByShikimori(title: string, idMal: number): Promise<{ 
   }
 }
 
-async function fetchKodik(title: string, year?: number | null): Promise<{ title: string; description: string } | null> {
-  try {
-    const res = await fetch(`${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true`, {
-      method: 'POST',
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    if (!data.results || data.results.length === 0) return null
-
-    if (year) {
-      for (const item of data.results) {
-        if (item.material_data?.year === year) {
-          return {
-            title: item.title || '',
-            description: item.material_data?.description || '',
-          }
-        }
-      }
-    }
-
-    const item = data.results[0]
-    return {
-      title: item.title || '',
-      description: item.material_data?.description || '',
-    }
-  } catch {
-    return null
-  }
-}
-
 export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string, nameNative?: string, year?: number | null): Promise<void> {
   const queries = [...new Set([nameNative, nameEn, nameJp].filter(Boolean) as string[])]
   const key = cacheKey(idMal, queries.join('|'))
@@ -82,13 +49,6 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
     try {
       for (const q of queries) {
         const result = await fetchRussianByShikimori(q, idMal)
-        if (result && result.title) {
-          cache.set(key, result)
-          return
-        }
-      }
-      for (const q of queries) {
-        const result = await fetchKodik(q, year)
         if (result && result.title) {
           cache.set(key, result)
           return

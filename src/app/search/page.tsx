@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AniListAnimeCard } from '@/components/anime/AniListAnimeCard'
-import { AniListAnime } from '@/lib/anilist/client'
+import { searchAnime, AniListAnime } from '@/lib/anilist/client'
 import { searchWithRussian } from '@/lib/search'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'

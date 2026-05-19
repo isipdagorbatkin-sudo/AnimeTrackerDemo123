@@ -149,12 +149,13 @@ async function queryAniList<T>(query: string, variables: Record<string, unknown>
     throw new Error(err?.message || `AniList API error: ${response.status}`)
   }
 
-  const data = await response.json()
-  if (data.errors) {
-    throw new Error(data.errors[0]?.message || 'AniList GraphQL error')
+  const body = await response.json()
+
+  if (body.errors && !body.data) {
+    throw new Error(body.errors[0]?.message || 'AniList GraphQL error')
   }
 
-  return data.data
+  return body.data
 }
 
 export async function searchAnime(query: string, page = 1, perPage = 20): Promise<AniListSearchResponse> {

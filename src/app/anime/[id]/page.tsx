@@ -14,7 +14,8 @@ import {
   AniListCharacter,
 } from '@/lib/anilist/client'
 import { useRussianTitle, setRussianCache } from '@/lib/russian-cache'
-import { searchKodik, getEmbedLink, KodikResult } from '@/lib/kodik/client'
+import { generateCandidateSlugs, buildJutsuUrl, getSeasonEpisodeData } from '@/lib/jutsu/client'
+import { JutsuPlayer } from '@/components/anime/JutsuPlayer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,7 +29,9 @@ import Link from 'next/link'
 
 export default function AnimePage() {
   const params = useParams()
-  const animeId = parseInt(params.id as string)
+  const rawId = params.id as string
+  const animeId = parseInt(rawId)
+  const isInvalidId = isNaN(animeId)
   const [anime, setAnime] = useState<AniListAnime | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -41,8 +44,10 @@ export default function AnimePage() {
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
   const [russianDescription, setRussianDescription] = useState('')
-  const [kodikResults, setKodikResults] = useState<KodikResult[]>([])
-  const [selectedKodik, setSelectedKodik] = useState<KodikResult | null>(null)
+  const [jutsuUrl, setJutsuUrl] = useState<string | null>(null)
+  const [jutsuSeasons, setJutsuSeasons] = useState<{ season: number; seasonName: string; episodes: { number: number; url: string }[] }[]>([])
+  const [jutsuLoading, setJutsuLoading] = useState(false)
+  const [jutsuError, setJutsuError] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -60,35 +65,39 @@ export default function AnimePage() {
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
-          const titles = [data.title?.english, data.title?.romaji].filter(Boolean) as string[]
-          for (const t of titles) {
-            const res = await searchKodik(t)
-            if (res.length > 0) {
-              const groups = new Map<string, KodikResult[]>()
-              for (const r of res) {
-                const key = r.shikimori_id || r.id
-                if (!groups.has(key)) groups.set(key, [])
-                groups.get(key)!.push(r)
-              }
-              let bestGroup: KodikResult[] = []
-              for (const g of groups.values()) {
-                if (g.length > bestGroup.length) bestGroup = g
-              }
-              if (bestGroup.length > 0) {
-                setKodikResults(bestGroup)
-                setSelectedKodik(bestGroup[0])
-                const r = bestGroup[0]
-                if (r.title) {
+          const searchTitles = [data.title?.english, data.title?.romaji, data.title?.native].filter(Boolean) as string[]
+          const candidates = searchTitles.flatMap(t => generateCandidateSlugs(t))
+          const uniqueSlugs = [...new Set(candidates)]
+          setJutsuLoading(true)
+          for (const slug of uniqueSlugs) {
+            if (!slug) continue
+            try {
+              const jutsuUrl = buildJutsuUrl(slug)
+              const infoRes = await fetch(`/api/jutsu/info?url=${encodeURIComponent(jutsuUrl)}`)
+              if (!infoRes.ok) continue
+              const infoData = await infoRes.json()
+              if (infoData.success) {
+                setJutsuUrl(jutsuUrl)
+                const seasonData = await getSeasonEpisodeData(jutsuUrl)
+                setJutsuSeasons(seasonData)
+                const allEpisodes = seasonData.flatMap(s => s.episodes)
+                if (allEpisodes.length > 0) {
+                  setJutsuLoading(false)
+                }
+                if (infoData.info?.title) {
                   const queryParts = [...new Set([data.title?.native, data.title?.english, data.title?.romaji].filter(Boolean) as string[])]
-                  setRussianCache(data.idMal || 0, queryParts.join('|'), { title: r.title, description: r.material_data?.description || '' })
+                  setRussianCache(data.idMal || 0, queryParts.join('|'), { title: infoData.info.title, description: infoData.info.description || '' })
                 }
-                if (r.material_data?.description) {
-                  setRussianDescription(r.material_data.description)
+                if (infoData.info?.description) {
+                  setRussianDescription(infoData.info.description)
                 }
+                break
               }
-              break
+            } catch {
+              continue
             }
           }
+          setJutsuLoading(false)
         } else {
           setError('Аниме не найдено')
         }
@@ -135,7 +144,7 @@ export default function AnimePage() {
   const description = russianDescription || anime?.description?.replace(/<[^>]+>/g, '') || ''
   const score = anime?.meanScore || anime?.averageScore || 0
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="relative">
@@ -146,12 +155,19 @@ export default function AnimePage() {
     )
   }
 
-  if (loading) {
+  if (isInvalidId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="relative">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-destructive/20 mb-6">
+            <span className="text-5xl">⚠️</span>
+          </div>
+          <p className="text-destructive text-xl mb-6">Аниме не найдено</p>
+          <Link href="/">
+            <Button size="lg">
+              Вернуться на главную
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -372,39 +388,31 @@ export default function AnimePage() {
             )}
           </div>
 
-          {kodikResults.length > 0 && (
+          {(jutsuUrl || jutsuLoading) && (
             <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <PlayCircle className="h-5 w-5 text-primary" />
                 Смотреть
               </h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {kodikResults.map((r, i) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedKodik(r)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      selectedKodik?.id === r.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card/50 border border-border/30 hover:border-primary/40'
-                    }`}
-                  >
-                    {r.translation.title}
-                    <span className="text-xs ml-1 opacity-70">
-                      ({r.translation.type === 'voice' ? 'озвучка' : 'субтитры'})
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {selectedKodik && (
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
-                  <iframe
-                    src={getEmbedLink(selectedKodik)}
-                    className="absolute inset-0 w-full h-full"
-                    allow="autoplay; fullscreen"
-                    allowFullScreen
-                    sandbox="allow-scripts allow-same-origin"
-                  />
+              {jutsuLoading ? (
+                <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black/50 flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Поиск эпизодов...</p>
+                  </div>
+                </div>
+              ) : jutsuError ? (
+                <div className="text-destructive bg-destructive/10 px-4 py-3 rounded-xl text-sm">
+                  {jutsuError}
+                </div>
+              ) : jutsuUrl && jutsuSeasons.length > 0 ? (
+                <JutsuPlayer
+                  animeUrl={jutsuUrl}
+                  seasons={jutsuSeasons}
+                />
+              ) : (
+                <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black/30 flex items-center justify-center">
+                  <p className="text-muted-foreground">Эпизоды не найдены</p>
                 </div>
               )}
             </div>

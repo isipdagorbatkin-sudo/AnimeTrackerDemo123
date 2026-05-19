@@ -64,7 +64,18 @@ export function buildSearchCandidates(query: string): string[] {
 
 import { searchAnime } from './anilist/client'
 import type { AniListAnime } from './anilist/client'
-import { searchKodik } from './kodik/client'
+
+async function searchShikimori(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(query)}&limit=10`)
+    if (!res.ok) return []
+    const data = await res.json()
+    if (!Array.isArray(data)) return []
+    return data.map((a: any) => a.name || a.english?.[0] || '').filter(Boolean)
+  } catch {
+    return []
+  }
+}
 
 export async function searchWithRussian(query: string, page = 1, perPage = 20): Promise<{ media: AniListAnime[]; hasMore: boolean }> {
   const candidates = buildSearchCandidates(query)
@@ -82,13 +93,12 @@ export async function searchWithRussian(query: string, page = 1, perPage = 20): 
 
   if (hasCyrillic(query) || deduped.length < 3) {
     try {
-      const kodikResults = await searchKodik(query)
-      if (kodikResults.length > 0) {
-        const kodikTitles = [...new Set(kodikResults.map(r => r.title_orig || r.title).filter(Boolean))] as string[]
-        const kodikSearchResults = await Promise.all(
-          kodikTitles.map(t => searchAnime(t, 1, 5).then(r => r.Page?.media || []))
+      const shikimoriNames = await searchShikimori(query)
+      if (shikimoriNames.length > 0) {
+        const shikiSearchResults = await Promise.all(
+          shikimoriNames.map(t => searchAnime(t, 1, 5).then(r => r.Page?.media || []))
         )
-        for (const a of kodikSearchResults.flat()) {
+        for (const a of shikiSearchResults.flat()) {
           if (!seen.has(a.id)) {
             deduped.push(a)
             seen.add(a.id)
