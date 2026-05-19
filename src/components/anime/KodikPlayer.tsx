@@ -30,6 +30,7 @@ interface KodikResult {
 
 interface KodikPlayerProps {
   animeTitle: string
+  fallbackTitles?: string[]
 }
 
 async function searchKodikDirect(title: string): Promise<KodikResult[]> {
@@ -40,7 +41,7 @@ async function searchKodikDirect(title: string): Promise<KodikResult[]> {
   return data.results || []
 }
 
-export function KodikPlayer({ animeTitle }: KodikPlayerProps) {
+export function KodikPlayer({ animeTitle, fallbackTitles }: KodikPlayerProps) {
   const [results, setResults] = useState<KodikResult[]>([])
   const [selected, setSelected] = useState<KodikResult | null>(null)
   const [selectedEpisode, setSelectedEpisode] = useState<string>('')
@@ -57,9 +58,16 @@ export function KodikPlayer({ animeTitle }: KodikPlayerProps) {
     setStatusMessage('Поиск...')
 
     try {
-      let list = await searchKodikDirect(title)
+      let queries = [title, ...(fallbackTitles || [])].filter((v, i, a) => v && a.indexOf(v) === i)
+
+      let list: KodikResult[] = []
+      for (const q of queries) {
+        const results = await searchKodikDirect(q)
+        if (results.length > 0) { list = results; break }
+      }
+
       if (list.length === 0) {
-        setError(`Аниме не найдено: "${title}"`)
+        setError(`Аниме не найдено в Kodik: "${title}"`)
         setLoading(false)
         return
       }

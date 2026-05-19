@@ -358,7 +358,10 @@ export default function AnimePage() {
               Смотреть
             </h3>
             {animegoEnabled && anime && (
-              <KodikPlayer animeTitle={title || anime.title?.romaji || anime.title?.english || ''} />
+              <KodikPlayer
+                animeTitle={title || anime.title?.romaji || anime.title?.english || ''}
+                fallbackTitles={[anime.title?.romaji, anime.title?.english, anime.title?.native].filter(Boolean) as string[]}
+              />
             )}
           </div>
 
