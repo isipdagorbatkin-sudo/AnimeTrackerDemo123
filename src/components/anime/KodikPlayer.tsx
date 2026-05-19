@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Play, ChevronDown, ExternalLink } from 'lucide-react'
+import { Loader2, Play, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const KODIK_TOKEN = '56a768d08f43091901c44b54fe970049'
+const KODIK_API = 'https://kodik-api.com/search'
 
 interface KodikTranslation {
   id: number
@@ -27,13 +30,20 @@ interface KodikResult {
 
 interface KodikPlayerProps {
   animeTitle: string
-  shikimoriId?: string
 }
 
-export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
+async function searchKodikDirect(title: string): Promise<KodikResult[]> {
+  const url = `${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true&with_seasons=true&with_episodes=true`
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.results || []
+}
+
+export function KodikPlayer({ animeTitle }: KodikPlayerProps) {
   const [results, setResults] = useState<KodikResult[]>([])
   const [selected, setSelected] = useState<KodikResult | null>(null)
-  const [selectedEpisode, setSelectedEpisode] = useState<string | null>(null)
+  const [selectedEpisode, setSelectedEpisode] = useState<string>('')
   const [selectedSeason, setSelectedSeason] = useState<string>('1')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,47 +57,37 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
     setStatusMessage('Поиск...')
 
     try {
-      const res = await fetch(`/api/kodik/search?q=${encodeURIComponent(title)}`)
-      const data = await res.json()
-      if (!data.success || data.results.length === 0) {
-        setError('Аниме не найдено в Kodik')
+      let list = await searchKodikDirect(title)
+      if (list.length === 0) {
+        setError(`Аниме не найдено: "${title}"`)
         setLoading(false)
         return
       }
 
-      let list = data.results as KodikResult[]
-
-      if (shikimoriId) {
-        const match = list.find((r: KodikResult) => r.shikimori_id === shikimoriId)
-        if (match) list = [match]
-      }
+      const serials = list.filter(r => r.type === 'anime-serial')
+      const movies = list.filter(r => r.type === 'anime')
+      const pick = serials.length > 0 ? serials[0] : (movies[0] || list[0])
 
       setResults(list)
-
-      const serials = list.filter((r: KodikResult) => r.type === 'anime-serial')
-      const movies = list.filter((r: KodikResult) => r.type === 'anime')
-
-      const pick = serials.length > 0 ? serials[0] : (movies[0] || list[0])
       setSelected(pick)
 
       if (pick.seasons) {
-        const seasonKeys = Object.keys(pick.seasons).sort((a, b) => parseInt(a) - parseInt(b))
-        setSelectedSeason(seasonKeys[0] || '1')
-        const epKeys = Object.keys(pick.seasons[seasonKeys[0] || '1']?.episodes || {}).sort((a, b) => parseInt(a) - parseInt(b))
-        if (epKeys.length > 0) {
-          setSelectedEpisode(epKeys[0])
-        }
-      } else if (pick.link) {
+        const sKeys = Object.keys(pick.seasons).sort((a, b) => parseInt(a) - parseInt(b))
+        const season = sKeys[0] || '1'
+        setSelectedSeason(season)
+        const eps = Object.keys(pick.seasons[season]?.episodes || {}).sort((a, b) => parseInt(a) - parseInt(b))
+        setSelectedEpisode(eps[0] || '')
+      } else {
         setSelectedEpisode('1')
       }
 
       setStatusMessage('')
       setLoading(false)
-    } catch {
-      setError('Ошибка поиска в Kodik')
+    } catch (err: any) {
+      setError('Ошибка поиска: ' + (err.message || 'неизвестная'))
       setLoading(false)
     }
-  }, [shikimoriId])
+  }, [])
 
   useEffect(() => {
     if (animeTitle) doSearch(animeTitle)
@@ -109,14 +109,14 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
       const season = sKeys[0] || '1'
       setSelectedSeason(season)
       const eps = Object.keys(result.seasons[season]?.episodes || {}).sort((a, b) => parseInt(a) - parseInt(b))
-      setSelectedEpisode(eps[0] || '1')
+      setSelectedEpisode(eps[0] || '')
     } else {
       setSelectedEpisode('1')
     }
   }, [])
 
   const embedUrl = selectedEpisode && selected
-    ? (selected.seasons?.[selectedSeason]?.episodes?.[selectedEpisode] || selected.link)
+    ? `https:${selected.seasons?.[selectedSeason]?.episodes?.[selectedEpisode] || selected.link}`
     : null
 
   return (
@@ -124,27 +124,23 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
       <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
         {embedUrl ? (
           <iframe
-            src={`https:${embedUrl}`}
+            src={embedUrl}
             className="w-full h-full"
             allowFullScreen
             allow="autoplay; fullscreen"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
             {loading ? (
               <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  {statusMessage || 'Загрузка...'}
-                </p>
+                <p className="text-sm text-muted-foreground">{statusMessage}</p>
               </div>
             ) : (
               <div className="text-center p-4">
                 <Play className="h-12 w-12 text-primary/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  {error || 'Выберите эпизод'}
-                </p>
+                <p className="text-sm text-muted-foreground">{error || 'Выберите эпизод'}</p>
               </div>
             )}
           </div>
@@ -152,9 +148,7 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
       </div>
 
       {error && (
-        <div className="text-destructive bg-destructive/10 px-4 py-2 rounded-lg text-sm">
-          {error}
-        </div>
+        <div className="text-destructive bg-destructive/10 px-4 py-2 rounded-lg text-sm">{error}</div>
       )}
 
       {selected && (
@@ -170,7 +164,7 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
               </button>
               {showTranslationMenu && (
                 <div className="absolute top-full mt-1 left-0 bg-card border border-border/50 rounded-xl shadow-xl z-10 py-1 min-w-[200px]">
-                  {results.map((r) => (
+                  {results.map(r => (
                     <button
                       key={r.id}
                       onClick={() => selectTranslation(r)}
@@ -180,7 +174,9 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
                       )}
                     >
                       {r.translation.title}
-                      <span className="text-xs ml-1 opacity-60">({r.translation.type === 'subtitles' ? 'субтитры' : 'озвучка'})</span>
+                      <span className="text-xs ml-1 opacity-60">
+                        ({r.translation.type === 'subtitles' ? 'суб' : 'озвучка'})
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -196,7 +192,7 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
                   onClick={() => {
                     setSelectedSeason(s)
                     const eps = Object.keys(selected.seasons?.[s]?.episodes || {}).sort((a, b) => parseInt(a) - parseInt(b))
-                    setSelectedEpisode(eps[0] || '1')
+                    setSelectedEpisode(eps[0] || '')
                   }}
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
@@ -219,7 +215,7 @@ export function KodikPlayer({ animeTitle, shikimoriId }: KodikPlayerProps) {
             Эпизоды ({episodeKeys.length})
           </p>
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5">
-            {episodeKeys.map((ep) => (
+            {episodeKeys.map(ep => (
               <button
                 key={ep}
                 onClick={() => setSelectedEpisode(ep)}
