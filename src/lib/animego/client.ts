@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio'
 
 const ANIMEGO_BASE = 'https://animego.org'
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 export interface AnimegoSearchResult {
   id: string
@@ -12,20 +12,6 @@ export interface AnimegoSearchResult {
   image: string | null
   year: number | null
   type: string | null
-}
-
-export interface AnimegoAnimeInfo {
-  title: string
-  otherTitles: string
-  image: string
-  score: string
-  type: string
-  episodes: string
-  genres: string[]
-  status: string
-  duration: string
-  studio: string
-  description: string
 }
 
 export interface AnimegoEpisode {
@@ -49,7 +35,8 @@ export interface AnimegoStream {
   dash: string | null
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: number } = {}): Promise<Response> {
+  const timeoutMs = options.timeout ?? 15000
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -59,16 +46,50 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   }
 }
 
-async function animegoFetch(url: string, accept = 'text/html'): Promise<string> {
-  const response = await fetchWithTimeout(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      'Accept': `${accept},application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
-      'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-    },
-  })
+function isDdosGuardHtml(html: string): boolean {
+  return html.includes('DDoS-Guard') && html.includes('ddos-guard')
+}
+
+async function fetchWithCookies(url: string, accept = 'text/html'): Promise<string> {
+  const headers: Record<string, string> = {
+    'User-Agent': USER_AGENT,
+    'Accept': `${accept},application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': ANIMEGO_BASE + '/',
+  }
+
+  const response = await fetchWithTimeout(url, { headers })
   if (!response.ok) throw new Error(`AnimeGO HTTP ${response.status}`)
   return response.text()
+}
+
+async function tryFetchWithFreshCookies(url: string): Promise<string> {
+  const html = await fetchWithCookies(url)
+  if (isDdosGuardHtml(html)) {
+    const cookieRes = await fetch(ANIMEGO_BASE, {
+      headers: { 'User-Agent': USER_AGENT },
+      redirect: 'manual',
+    })
+    const setCookie = cookieRes.headers.get('set-cookie') || ''
+    const cookies = setCookie.split(/\s*,\s*/).map(c => c.split(';')[0]).join('; ')
+
+    const headers: Record<string, string> = {
+      'User-Agent': USER_AGENT,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Referer': ANIMEGO_BASE + '/',
+    }
+    if (cookies) headers['Cookie'] = cookies
+
+    const retryResponse = await fetchWithTimeout(url, { headers })
+    if (!retryResponse.ok) throw new Error(`AnimeGO HTTP ${retryResponse.status}`)
+    return retryResponse.text()
+  }
+  return html
+}
+
+async function animegoFetch(url: string): Promise<string> {
+  return tryFetchWithFreshCookies(url)
 }
 
 export async function searchAnimego(query: string): Promise<AnimegoSearchResult[]> {
@@ -78,7 +99,7 @@ export async function searchAnimego(query: string): Promise<AnimegoSearchResult[
   const results: AnimegoSearchResult[] = []
 
   $('.ani-list__item').each((_, el) => {
-    const linkEl = $(el).find('a.ani-list__item-title a, a.text-line-clamp[href*="/anime/"]').first()
+    const linkEl = $(el).find('a.text-line-clamp[href*="/anime/"]').first()
     const link = linkEl.attr('href') || ''
     if (!link || !link.includes('/anime/')) return
 
@@ -87,7 +108,7 @@ export async function searchAnimego(query: string): Promise<AnimegoSearchResult[
     const slugMatch = cleanPath.match(/anime\/([^/]+)/)
 
     const title = $(el).find('a.text-line-clamp').first().text().trim()
-    const originalTitle = $(el).find('.fw-lighter.small, .fw-lighter.small.mb-2').first().text().trim() || null
+    const originalTitle = $(el).find('.fw-lighter.small').first().text().trim() || null
     const img = $(el).find('img.image__img').first()
     const image = img.attr('src') || img.attr('data-src') || null
 
@@ -120,47 +141,6 @@ export async function searchAnimego(query: string): Promise<AnimegoSearchResult[
   return results
 }
 
-export async function getAnimegoInfo(url: string): Promise<AnimegoAnimeInfo> {
-  const html = await animegoFetch(url)
-  const $ = cheerio.load(html)
-
-  const title = $('h1').first().text().trim()
-  const image = $('.anime-poster img, [itemprop="image"]').first().attr('src') || $('.anime-poster img').first().attr('data-src') || ''
-
-  const info: AnimegoAnimeInfo = {
-    title,
-    otherTitles: $('.other-titles, .alternative-title').first().text().trim(),
-    image,
-    score: $('.rating-value, .score, [itemprop="ratingValue"]').first().text().trim(),
-    type: '',
-    episodes: '',
-    genres: [],
-    status: '',
-    duration: '',
-    studio: '',
-    description: $('.description, [itemprop="description"]').first().text().trim(),
-  }
-
-  $('.anime-info-item, .media-info-item, .list-group-item').each((_, el) => {
-    const label = $(el).find('dt, .label, strong, .title').first().text().trim().toLowerCase()
-    const value = $(el).find('dd, .value, .text').first().text().trim()
-
-    if (label.includes('тип')) info.type = value
-    else if (label.includes('эпизод')) info.episodes = value
-    else if (label.includes('жанр')) {
-      $(el).find('a, span').each((_, g) => {
-        const genreText = $(g).text().trim()
-        if (genreText) info.genres.push(genreText)
-      })
-    }
-    else if (label.includes('статус')) info.status = value
-    else if (label.includes('длитель')) info.duration = value
-    else if (label.includes('студия')) info.studio = value
-  })
-
-  return info
-}
-
 export async function getAnimegoEpisodes(animeId: string): Promise<AnimegoEpisode[]> {
   const html = await animegoFetch(`${ANIMEGO_BASE}/anime/${animeId}/episodes`)
   const $ = cheerio.load(html)
@@ -189,10 +169,6 @@ export async function getAnimegoVoices(animeId: string, episode = 1): Promise<{ 
 
   const voices: AnimegoVoice[] = []
   let totalEpisodes: number | null = null
-
-  const totalText = $('.episodes-total, .total-episodes, [data-total]').first().attr('data-total') || $('.episodes-total').first().text()
-  const totalMatch = totalText.match(/\d+/)
-  if (totalMatch) totalEpisodes = parseInt(totalMatch[0])
 
   $('[data-translation-id]').each((_, el) => {
     const translationId = $(el).attr('data-translation-id') || ''
@@ -236,10 +212,12 @@ export async function getAnimegoStream(
   try {
     const apiUrl = `${ANIMEGO_BASE}/api/stream/cvh/${cvhId}?season=${season}&episode=${episode}&translation=${encodeURIComponent(translation)}`
     const response = await fetchWithTimeout(apiUrl, {
+      timeout: 15000,
       headers: {
         'User-Agent': USER_AGENT,
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
+        'Referer': ANIMEGO_BASE + '/',
       },
     })
 
