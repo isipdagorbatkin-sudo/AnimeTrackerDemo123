@@ -13,9 +13,8 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
-import { useRussianTitle, setRussianCache } from '@/lib/russian-cache'
-import { generateCandidateSlugs, buildJutsuUrl, getSeasonEpisodeData } from '@/lib/jutsu/client'
-import { JutsuPlayer } from '@/components/anime/JutsuPlayer'
+import { useRussianTitle } from '@/lib/russian-cache'
+import { AnimegoPlayer } from '@/components/anime/AnimegoPlayer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,11 +43,7 @@ export default function AnimePage() {
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
   const [russianDescription, setRussianDescription] = useState('')
-  const [jutsuUrl, setJutsuUrl] = useState<string | null>(null)
-  const [jutsuSeasons, setJutsuSeasons] = useState<{ season: number; seasonName: string; episodes: { number: number; url: string }[] }[]>([])
-  const [jutsuLoading, setJutsuLoading] = useState(false)
-  const [jutsuError, setJutsuError] = useState('')
-  const [manualUrl, setManualUrl] = useState('')
+  const [animegoEnabled, setAnimegoEnabled] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -66,8 +61,7 @@ export default function AnimePage() {
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
-          setJutsuLoading(false)
-          tryJutsuSearch(data)
+          setAnimegoEnabled(true)
         } else {
           setError('Аниме не найдено')
         }
@@ -96,76 +90,6 @@ export default function AnimePage() {
         .maybeSingle()
       setIsInCollection(!!data)
     } catch {}
-  }
-
-  const tryJutsuSearch = async (data: AniListAnime) => {
-    const searchTitles = [data.title?.romaji, data.title?.english].filter(Boolean) as string[]
-    const candidates = searchTitles.flatMap(t => generateCandidateSlugs(t))
-    const uniqueSlugs = [...new Set(candidates)].slice(0, 5)
-    setJutsuLoading(true)
-    setJutsuError('')
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000)
-    try {
-      const found = await Promise.race([
-        ...uniqueSlugs.map(async (slug) => {
-          if (!slug || controller.signal.aborted) return null
-          try {
-            const jutsuUrl = buildJutsuUrl(slug)
-            const infoRes = await fetch(`/api/jutsu/info?url=${encodeURIComponent(jutsuUrl)}`)
-            if (!infoRes.ok) return null
-            const infoData = await infoRes.json()
-            if (infoData.success) {
-              controller.abort()
-              return { url: jutsuUrl, info: infoData.info }
-            }
-            return null
-          } catch { return null }
-        }),
-      ])
-      if (found) {
-        setJutsuUrl(found.url)
-        const seasonData = await getSeasonEpisodeData(found.url)
-        setJutsuSeasons(seasonData)
-        if (found.info?.title) {
-          const queryParts = [...new Set([data.title?.native, data.title?.english, data.title?.romaji].filter(Boolean) as string[])]
-          setRussianCache(data.idMal || 0, queryParts.join('|'), { title: found.info.title, description: found.info.description || '' })
-        }
-        if (found.info?.description) setRussianDescription(found.info.description)
-      } else {
-        setJutsuError('Не удалось найти аниме на JutSu автоматически')
-      }
-    } catch {
-      setJutsuError('Поиск на JutSu не удался')
-    } finally {
-      clearTimeout(timeout)
-      setJutsuLoading(false)
-    }
-  }
-
-  const handleManualJutsuUrl = async (url: string) => {
-    if (!url || (!url.includes('jut.su/') && !url.includes('jutsu/'))) {
-      setJutsuError('Введите корректную ссылку на JutSu')
-      return
-    }
-    setJutsuLoading(true)
-    setJutsuError('')
-    try {
-      const cleanUrl = url.match(/https?:\/\/[^\s/]+[^\s]*/)?.[0] || url
-      const infoRes = await fetch(`/api/jutsu/info?url=${encodeURIComponent(cleanUrl)}`)
-      const infoData = await infoRes.json()
-      if (infoData.success) {
-        setJutsuUrl(cleanUrl)
-        const seasonData = await getSeasonEpisodeData(cleanUrl)
-        setJutsuSeasons(seasonData)
-      } else {
-        setJutsuError('Не удалось загрузить информацию с JutSu')
-      }
-    } catch {
-      setJutsuError('Ошибка подключения к JutSu')
-    } finally {
-      setJutsuLoading(false)
-    }
   }
 
   const getStatusColor = (status: string) => {
@@ -433,45 +357,8 @@ export default function AnimePage() {
               <PlayCircle className="h-5 w-5 text-primary" />
               Смотреть
             </h3>
-            {jutsuLoading ? (
-              <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black/50 flex items-center justify-center">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Поиск эпизодов...</p>
-                </div>
-              </div>
-            ) : jutsuUrl && jutsuSeasons.length > 0 ? (
-              <JutsuPlayer animeUrl={jutsuUrl} seasons={jutsuSeasons} />
-            ) : (
-              <div className="space-y-4">
-                <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black/30 flex items-center justify-center">
-                  <div className="text-center p-6">
-                    <PlayCircle className="h-12 w-12 text-primary/40 mx-auto mb-3" />
-                    <p className="text-muted-foreground mb-4">Вставьте ссылку на аниме с JutSu</p>
-                    <div className="flex gap-2 max-w-md mx-auto">
-                      <input
-                        type="text"
-                        value={manualUrl}
-                        onChange={(e) => setManualUrl(e.target.value)}
-                        placeholder="https://jut.su/shingeki-no-kyojin/"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-card/50 border border-border/40 text-sm text-foreground placeholder-muted-foreground/50 focus:outline-none focus:border-primary/50"
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualJutsuUrl(manualUrl)}
-                      />
-                      <button
-                        onClick={() => handleManualJutsuUrl(manualUrl)}
-                        className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
-                      >
-                        Загрузить
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                {jutsuError && (
-                  <div className="text-destructive bg-destructive/10 px-4 py-3 rounded-xl text-sm">
-                    {jutsuError}
-                  </div>
-                )}
-              </div>
+            {animegoEnabled && anime && (
+              <AnimegoPlayer animeTitle={anime.title?.romaji || anime.title?.english || ''} />
             )}
           </div>
 
