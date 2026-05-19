@@ -358,7 +358,7 @@ export default function AnimePage() {
               Смотреть
             </h3>
             {animegoEnabled && anime && (
-              <AnimegoPlayer animeTitle={anime.title?.romaji || anime.title?.english || ''} />
+              <AnimegoPlayer animeTitle={title || anime.title?.romaji || anime.title?.english || ''} />
             )}
           </div>
 

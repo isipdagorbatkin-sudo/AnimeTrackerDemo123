@@ -26,8 +26,6 @@ export interface AnimegoAnimeInfo {
   duration: string
   studio: string
   description: string
-  translations: string[]
-  screenshots: string[]
 }
 
 export interface AnimegoEpisode {
@@ -61,11 +59,11 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   }
 }
 
-async function animegoFetch(url: string): Promise<string> {
+async function animegoFetch(url: string, accept = 'text/html'): Promise<string> {
   const response = await fetchWithTimeout(url, {
     headers: {
       'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept': `${accept},application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
       'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
     },
   })
@@ -74,52 +72,48 @@ async function animegoFetch(url: string): Promise<string> {
 }
 
 export async function searchAnimego(query: string): Promise<AnimegoSearchResult[]> {
-  const html = await animegoFetch(`${ANIMEGO_BASE}/search?q=${encodeURIComponent(query)}`)
+  const html = await animegoFetch(`${ANIMEGO_BASE}/anime?search=${encodeURIComponent(query)}`)
   const $ = cheerio.load(html)
 
   const results: AnimegoSearchResult[] = []
 
-  $('.animes-list-item, .media-item, .col-lg-2, [data-id]').each((_, el) => {
-    const linkEl = $(el).find('a').first()
+  $('.ani-list__item').each((_, el) => {
+    const linkEl = $(el).find('a.ani-list__item-title a, a.text-line-clamp[href*="/anime/"]').first()
     const link = linkEl.attr('href') || ''
     if (!link || !link.includes('/anime/')) return
 
-    const idMatch = link.match(/-(\d+)$/) || link.match(/\/anime\/(\d+)/)
-    const slugMatch = link.match(/\/anime\/([^/]+)/)
+    const cleanPath = link.startsWith('/') ? link.slice(1) : link
+    const idMatch = cleanPath.match(/-(\d+)$/)
+    const slugMatch = cleanPath.match(/anime\/([^/]+)/)
 
-    results.push({
-      id: idMatch?.[1] || '',
-      slug: slugMatch?.[1] || '',
-      link,
-      title: linkEl.attr('title') || $(el).find('.media-name, .title, h5, .card-title').first().text().trim(),
-      originalTitle: $(el).find('.media-original-name, .original-name, small').first().text().trim() || null,
-      image: $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src') || null,
-      year: parseInt($(el).find('.year, .media-year').first().text().trim()) || null,
-      type: $(el).find('.type, .media-type, .badge').first().text().trim() || null,
+    const title = $(el).find('a.text-line-clamp').first().text().trim()
+    const originalTitle = $(el).find('.fw-lighter.small, .fw-lighter.small.mb-2').first().text().trim() || null
+    const img = $(el).find('img.image__img').first()
+    const image = img.attr('src') || img.attr('data-src') || null
+
+    let year: number | null = null
+    $(el).find('a[href^="/anime/season/"]').each((_, y) => {
+      const yText = $(y).text().trim()
+      const yNum = parseInt(yText)
+      if (!isNaN(yNum) && yNum > 1900 && yNum < 2100) year = yNum
     })
-  })
 
-  $('.card, .anime-card, article').each((_, el) => {
-    const linkEl = $(el).find('a[href*="/anime/"]').first()
-    const link = linkEl.attr('href') || ''
-    if (!link) return
+    let type: string | null = null
+    $(el).find('a[href^="/anime/type/"]').each((_, t) => {
+      type = $(t).text().trim()
+    })
 
-    const idMatch = link.match(/-(\d+)$/)
-    const slugMatch = link.match(/\/anime\/([^/]+)/)
-
-    const existingIds = new Set(results.map(r => r.id))
-    const id = idMatch?.[1] || slugMatch?.[1] || ''
-    if (existingIds.has(id)) return
+    if (!title) return
 
     results.push({
-      id,
+      id: idMatch?.[1] || slugMatch?.[1] || '',
       slug: slugMatch?.[1] || '',
-      link,
-      title: linkEl.attr('title') || $(el).find('.title, h5, .card-title, .name').first().text().trim(),
-      originalTitle: $(el).find('.original-title, small.text-muted').first().text().trim() || null,
-      image: $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src') || null,
-      year: parseInt($(el).find('.year, .date').first().text().trim()) || null,
-      type: $(el).find('.type, .badge').first().text().trim() || null,
+      link: link.startsWith('http') ? link : `${ANIMEGO_BASE}${link}`,
+      title,
+      originalTitle,
+      image,
+      year,
+      type,
     })
   })
 
@@ -145,11 +139,9 @@ export async function getAnimegoInfo(url: string): Promise<AnimegoAnimeInfo> {
     duration: '',
     studio: '',
     description: $('.description, [itemprop="description"]').first().text().trim(),
-    translations: [],
-    screenshots: [],
   }
 
-  $('.anime-info-item, .media-info-item, .list-group-item, .col-6').each((_, el) => {
+  $('.anime-info-item, .media-info-item, .list-group-item').each((_, el) => {
     const label = $(el).find('dt, .label, strong, .title').first().text().trim().toLowerCase()
     const value = $(el).find('dd, .value, .text').first().text().trim()
 
@@ -164,17 +156,6 @@ export async function getAnimegoInfo(url: string): Promise<AnimegoAnimeInfo> {
     else if (label.includes('статус')) info.status = value
     else if (label.includes('длитель')) info.duration = value
     else if (label.includes('студия')) info.studio = value
-    else if (label.includes('перевод')) {
-      $(el).find('a, span').each((_, g) => {
-        const t = $(g).text().trim()
-        if (t) info.translations.push(t)
-      })
-    }
-  })
-
-  $('.screenshots img, .gallery img').each((_, el) => {
-    const src = $(el).attr('src') || $(el).attr('data-src') || ''
-    if (src) info.screenshots.push(src)
   })
 
   return info
@@ -186,7 +167,7 @@ export async function getAnimegoEpisodes(animeId: string): Promise<AnimegoEpisod
 
   const episodes: AnimegoEpisode[] = []
 
-  $('tr, .episode-item, .schedule-item').each((_, el) => {
+  $('tr, .episode-item').each((_, el) => {
     const seriaText = $(el).find('.episode-number, td:first-child, .number').first().text().trim()
     const seria = parseInt(seriaText)
     if (isNaN(seria)) return
@@ -213,8 +194,8 @@ export async function getAnimegoVoices(animeId: string, episode = 1): Promise<{ 
   const totalMatch = totalText.match(/\d+/)
   if (totalMatch) totalEpisodes = parseInt(totalMatch[0])
 
-  $('.voice-item, .translation-item, [data-translation-id]').each((_, el) => {
-    const translationId = $(el).attr('data-translation-id') || $(el).attr('data-id') || ''
+  $('[data-translation-id]').each((_, el) => {
+    const translationId = $(el).attr('data-translation-id') || ''
     const label = $(el).text().trim() || $(el).attr('title') || ''
     const player = $(el).attr('data-player') || 'cvh'
 
@@ -228,7 +209,7 @@ export async function getAnimegoVoices(animeId: string, episode = 1): Promise<{ 
   })
 
   if (voices.length === 0) {
-    $('select option, .voice-select option').each((_, el) => {
+    $('select option').each((_, el) => {
       const val = $(el).attr('value') || ''
       const label = $(el).text().trim()
       if (val && label && val !== '0') {
@@ -268,25 +249,6 @@ export async function getAnimegoStream(
         mp4s: data.mp4s || data.MP4s || [],
         hls: data.hls || data.HLS || null,
         dash: data.dash || data.DASH || null,
-      }
-    }
-  } catch {}
-
-  try {
-    const apiUrl = `${ANIMEGO_BASE}/api/stream/aniboom?cvh_id=${cvhId}&episode=${episode}&season=${season}`
-    const response = await fetchWithTimeout(apiUrl, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-    })
-    if (response.ok) {
-      const data = await response.json()
-      return {
-        mp4s: data.mp4s || [],
-        hls: data.url || data.hls || null,
-        dash: data.dash || null,
       }
     }
   } catch {}
