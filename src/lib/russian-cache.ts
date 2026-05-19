@@ -26,26 +26,6 @@ export function setRussianCache(idMal: number, key: string, text: RussianText): 
   cache.set(cacheKey(idMal, key), text)
 }
 
-async function fetchRussianByAnimego(title: string): Promise<RussianText | null> {
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10000)
-    const res = await fetch(`/api/animego/search?q=${encodeURIComponent(title)}`, { signal: controller.signal })
-    clearTimeout(timer)
-    if (!res.ok) return null
-    const data = await res.json()
-    if (data.success && data.results.length > 0) {
-      return {
-        title: data.results[0].title || '',
-        description: '',
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
 let shikimoriAvailable = true
 let lastShikimoriFail = 0
 const SHIKIMORI_COOLDOWN = 30_000
@@ -103,19 +83,10 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
     fetchQueue.push(async () => {
       try {
         for (const q of queries) {
-          const animegoResult = await fetchRussianByAnimego(q)
-          if (animegoResult && animegoResult.title) {
-            cache.set(key, animegoResult)
+          const shikiResult = await fetchRussianByShikimori(q, idMal)
+          if (shikiResult && shikiResult.title) {
+            cache.set(key, shikiResult)
             break
-          }
-        }
-        if (!cache.has(key)) {
-          for (const q of queries) {
-            const shikiResult = await fetchRussianByShikimori(q, idMal)
-            if (shikiResult && shikiResult.title) {
-              cache.set(key, shikiResult)
-              break
-            }
           }
         }
       } finally {

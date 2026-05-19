@@ -14,7 +14,7 @@ import {
   AniListCharacter,
 } from '@/lib/anilist/client'
 import { useRussianTitle } from '@/lib/russian-cache'
-import { AnimegoPlayer } from '@/components/anime/AnimegoPlayer'
+import { KodikPlayer } from '@/components/anime/KodikPlayer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -358,7 +358,7 @@ export default function AnimePage() {
               Смотреть
             </h3>
             {animegoEnabled && anime && (
-              <AnimegoPlayer animeTitle={title || anime.title?.romaji || anime.title?.english || ''} />
+              <KodikPlayer animeTitle={title || anime.title?.romaji || anime.title?.english || ''} />
             )}
           </div>
 
