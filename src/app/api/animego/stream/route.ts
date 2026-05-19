@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnimegoStream } from '@/lib/animego/client'
+import { getAnimegoStreamV2 } from '@/lib/animego/client'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,12 +10,12 @@ export async function GET(request: NextRequest) {
   const episode = parseInt(request.nextUrl.searchParams.get('episode') || '1')
   const translation = request.nextUrl.searchParams.get('translation') || ''
 
-  if (!cvhId && !translation) {
-    return NextResponse.json({ success: false, error: 'Missing stream parameters' }, { status: 400 })
+  if (!cvhId) {
+    return NextResponse.json({ success: false, error: 'Missing cvh_id' }, { status: 400 })
   }
 
   try {
-    const stream = await getAnimegoStream(cvhId, season, episode, translation)
+    const stream = await getAnimegoStreamV2(cvhId, season, episode, translation)
     if (!stream.mp4s.length && !stream.hls && !stream.dash) {
       return NextResponse.json({ success: false, error: 'No stream available' }, { status: 404 })
     }

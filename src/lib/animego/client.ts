@@ -1,7 +1,8 @@
 import * as cheerio from 'cheerio'
 
 const ANIMEGO_BASE = 'https://animego.org'
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+const CVH_API_BASE = 'https://plapi.cdnvideohub.com/api/v1/player/sv'
+const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0'
 
 export interface AnimegoSearchResult {
   id: string
@@ -47,89 +48,86 @@ async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: 
 }
 
 function isDdosGuardHtml(html: string): boolean {
-  return html.includes('DDoS-Guard') && html.includes('ddos-guard')
+  return (html.includes('DDoS-Guard') || html.includes('ddos-guard') || html.includes('Cloudflare')) && html.includes('access from')
 }
 
-async function fetchWithCookies(url: string, accept = 'text/html'): Promise<string> {
-  const headers: Record<string, string> = {
-    'User-Agent': USER_AGENT,
-    'Accept': `${accept},application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
-    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Referer': ANIMEGO_BASE + '/',
-  }
-
+async function fetchWithRetry(url: string, headers: Record<string, string>): Promise<string> {
   const response = await fetchWithTimeout(url, { headers })
   if (!response.ok) throw new Error(`AnimeGO HTTP ${response.status}`)
-  return response.text()
-}
+  let text = await response.text()
 
-async function tryFetchWithFreshCookies(url: string): Promise<string> {
-  const html = await fetchWithCookies(url)
-  if (isDdosGuardHtml(html)) {
+  if (isDdosGuardHtml(text)) {
     const cookieRes = await fetch(ANIMEGO_BASE, {
       headers: { 'User-Agent': USER_AGENT },
       redirect: 'manual',
     })
     const setCookie = cookieRes.headers.get('set-cookie') || ''
-    const cookies = setCookie.split(/\s*,\s*/).map(c => c.split(';')[0]).join('; ')
+    const cookies = setCookie.split(/\s*,\s*/).map(c => c.split(';')[0]).filter(Boolean).join('; ')
 
-    const headers: Record<string, string> = {
-      'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Referer': ANIMEGO_BASE + '/',
-    }
-    if (cookies) headers['Cookie'] = cookies
-
-    const retryResponse = await fetchWithTimeout(url, { headers })
-    if (!retryResponse.ok) throw new Error(`AnimeGO HTTP ${retryResponse.status}`)
-    return retryResponse.text()
+    const retryRes = await fetchWithTimeout(url, {
+      headers: { ...headers, ...(cookies ? { 'Cookie': cookies } : {}) },
+    })
+    if (!retryRes.ok) throw new Error(`AnimeGO HTTP ${retryRes.status}`)
+    text = await retryRes.text()
   }
-  return html
+
+  return text
 }
 
 async function animegoFetch(url: string): Promise<string> {
-  return tryFetchWithFreshCookies(url)
+  return fetchWithRetry(url, {
+    'User-Agent': USER_AGENT,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+  })
+}
+
+async function playerFetch(url: string): Promise<string> {
+  return fetchWithRetry(url, {
+    'User-Agent': USER_AGENT,
+    'X-Requested-With': 'XMLHttpRequest',
+    'Accept': 'application/json, text/html, */*',
+    'Referer': ANIMEGO_BASE + '/',
+  })
 }
 
 export async function searchAnimego(query: string): Promise<AnimegoSearchResult[]> {
-  const html = await animegoFetch(`${ANIMEGO_BASE}/anime?search=${encodeURIComponent(query)}`)
+  const html = await animegoFetch(`${ANIMEGO_BASE}/search/anime?q=${encodeURIComponent(query)}`)
   const $ = cheerio.load(html)
 
   const results: AnimegoSearchResult[] = []
 
-  $('.ani-list__item').each((_, el) => {
-    const linkEl = $(el).find('a.text-line-clamp[href*="/anime/"]').first()
-    const link = linkEl.attr('href') || ''
-    if (!link || !link.includes('/anime/')) return
+  $('div.ani-grid__item').each((_, el) => {
+    const linkEl = $(el).find('a[href*="/anime/"]').first()
+    const href = linkEl.attr('href') || ''
+    if (!href || !href.startsWith('/anime/')) return
 
-    const cleanPath = link.startsWith('/') ? link.slice(1) : link
-    const idMatch = cleanPath.match(/-(\d+)$/)
-    const slugMatch = cleanPath.match(/anime\/([^/]+)/)
+    const path = href.replace(/^\//, '')
+    const m = path.match(/^anime\/(.+)-(\d+)$/)
+    if (!m) return
 
-    const title = $(el).find('a.text-line-clamp').first().text().trim()
-    const originalTitle = $(el).find('.fw-lighter.small').first().text().trim() || null
+    const slug = m[1]
+    const animeId = m[2]
+    const titleEl = $(el).find('div.ani-grid__item-title a')
+    const title = titleEl.first().text().trim() || slug.replace(/-/g, ' ')
+
+    const originalTitle = $(el).find('div.ani-grid__item-body > div.fw-lighter').first().text().trim() || null
     const img = $(el).find('img.image__img').first()
     const image = img.attr('src') || img.attr('data-src') || null
 
     let year: number | null = null
-    $(el).find('a[href^="/anime/season/"]').each((_, y) => {
-      const yText = $(y).text().trim()
-      const yNum = parseInt(yText)
-      if (!isNaN(yNum) && yNum > 1900 && yNum < 2100) year = yNum
-    })
-
     let type: string | null = null
-    $(el).find('a[href^="/anime/type/"]').each((_, t) => {
-      type = $(t).text().trim()
+    $(el).find('div.ani-grid__item-genres span a').each((_, s) => {
+      const text = $(s).text().trim()
+      const num = parseInt(text)
+      if (!isNaN(num) && num > 1900 && num < 2100) year = num
+      else if (text !== '/') type = text
     })
-
-    if (!title) return
 
     results.push({
-      id: idMatch?.[1] || slugMatch?.[1] || '',
-      slug: slugMatch?.[1] || '',
-      link: link.startsWith('http') ? link : `${ANIMEGO_BASE}${link}`,
+      id: animeId,
+      slug,
+      link: ANIMEGO_BASE + href,
       title,
       originalTitle,
       image,
@@ -142,94 +140,170 @@ export async function searchAnimego(query: string): Promise<AnimegoSearchResult[
 }
 
 export async function getAnimegoEpisodes(animeId: string): Promise<AnimegoEpisode[]> {
-  const html = await animegoFetch(`${ANIMEGO_BASE}/anime/${animeId}/episodes`)
-  const $ = cheerio.load(html)
+  const response = await fetchWithTimeout(`${ANIMEGO_BASE}/anime/${animeId}/9999999/schedule/load`, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': ANIMEGO_BASE + '/',
+    },
+  })
+  if (!response.ok) throw new Error(`AnimeGO HTTP ${response.status}`)
+  const raw = await response.text()
+  let html: string
+  try {
+    const data = JSON.parse(raw)
+    html = (data?.data?.content || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+  } catch {
+    html = raw
+  }
 
+  const $ = cheerio.load(html)
   const episodes: AnimegoEpisode[] = []
 
-  $('tr, .episode-item').each((_, el) => {
-    const seriaText = $(el).find('.episode-number, td:first-child, .number').first().text().trim()
-    const seria = parseInt(seriaText)
-    if (isNaN(seria)) return
+  const divs = $('body > div').first().children('div')
+  for (let i = 0; i < divs.length; i += 4) {
+    const seriaText = divs.eq(i).attr('data-label') || divs.eq(i).text().trim()
+    const seria = parseInt(seriaText.replace(/[.\s]/g, ''))
+    if (isNaN(seria)) continue
 
     episodes.push({
       seria,
-      title: $(el).find('.episode-title, td:nth-child(2), .title').first().text().trim() || '---',
-      airDate: $(el).find('.episode-date, td:nth-child(3), .date').first().text().trim(),
-      isReleased: !$(el).find('.not-released, .future, .badge-warning').length,
+      title: divs.eq(i + 1).text().trim() || '---',
+      airDate: divs.eq(i + 2).text().trim(),
+      isReleased: divs.eq(i + 3).find('div').length > 0 || divs.eq(i + 3).text().trim() !== '',
     })
-  })
+  }
 
-  return episodes
+  return episodes.sort((a, b) => a.seria - b.seria)
 }
 
 export async function getAnimegoVoices(animeId: string, episode = 1): Promise<{ voices: AnimegoVoice[]; totalEpisodes: number | null }> {
-  const html = await animegoFetch(`${ANIMEGO_BASE}/anime/${animeId}/player?episode=${episode}`)
-  const $ = cheerio.load(html)
+  const json = await playerFetch(`${ANIMEGO_BASE}/player/${animeId}`)
+  let content: string
+  try {
+    const data = JSON.parse(json)
+    content = data?.data?.content || json
+    content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#039;/g, "'")
+  } catch {
+    content = json
+  }
+
+  const $ = cheerio.load(content)
 
   const voices: AnimegoVoice[] = []
-  let totalEpisodes: number | null = null
 
-  $('[data-translation-id]').each((_, el) => {
-    const translationId = $(el).attr('data-translation-id') || ''
-    const label = $(el).text().trim() || $(el).attr('title') || ''
-    const player = $(el).attr('data-player') || 'cvh'
+  const buttons = $('div#provider button, [data-translation-title]')
+  buttons.each((_, el) => {
+    const translationId = $(el).attr('data-ptranslation') || ''
+    const provider = $(el).attr('data-provider-title') || ''
+    const playerUrl = $(el).attr('data-player') || ''
+    const name = $(el).attr('data-translation-title') || $(el).text().trim()
+    if (!translationId || !name) return
+
+    const label = name.replace(/ \(ошибка\)/g, '').trim()
+    const embed = playerUrl ? 'https:' + playerUrl : ''
+    let cvhId: string | null = null
+    if (embed.includes('cdn-iframe/')) {
+      const match = embed.match(/cdn-iframe\/([^/]+)/)
+      if (match) cvhId = match[1]
+    }
 
     voices.push({
       label,
       translationId,
-      player,
-      embed: $(el).attr('data-embed') || $(el).find('iframe').attr('src') || '',
-      cvhId: $(el).attr('data-cvh-id') || null,
+      player: provider || 'cvh',
+      embed,
+      cvhId,
     })
   })
 
-  if (voices.length === 0) {
-    $('select option').each((_, el) => {
-      const val = $(el).attr('value') || ''
-      const label = $(el).text().trim()
-      if (val && label && val !== '0') {
-        voices.push({
-          label,
-          translationId: val,
-          player: 'cvh',
-          embed: '',
-          cvhId: null,
-        })
-      }
-    })
-  }
+  let totalEpisodes: number | null = null
+  const epNums: number[] = []
+  $('[data-episode]').each((_, el) => {
+    try {
+      epNums.push(parseInt($(el).text().trim()))
+    } catch {}
+  })
+  if (epNums.length > 0) totalEpisodes = Math.max(...epNums)
 
   return { voices, totalEpisodes }
 }
 
-export async function getAnimegoStream(
+export async function cvhGetPlaylist(cvhId: string): Promise<any> {
+  const url = `${CVH_API_BASE}/playlist?pub=747&aggr=mali&id=${cvhId}`
+  const response = await fetchWithTimeout(url, {
+    headers: {
+      'Referer': ANIMEGO_BASE + '/',
+      'Accept': 'application/json',
+      'User-Agent': USER_AGENT,
+    },
+  })
+  if (!response.ok) throw new Error(`CVH HTTP ${response.status}`)
+  const data = await response.json()
+  return data.items || []
+}
+
+export async function cvhGetStreamByVkId(vkId: string): Promise<AnimegoStream> {
+  const url = `${CVH_API_BASE}/video/${vkId}`
+  const response = await fetchWithTimeout(url, {
+    headers: {
+      'Referer': ANIMEGO_BASE + '/',
+      'Accept': 'application/json',
+      'User-Agent': USER_AGENT,
+    },
+  })
+  if (!response.ok) throw new Error(`CVH HTTP ${response.status}`)
+  const data = await response.json()
+  const sources = data.sources || {}
+
+  return {
+    mp4s: Object.entries(sources)
+      .filter(([k, v]) => k.startsWith('url') && typeof v === 'string' && v.startsWith('http'))
+      .map(([_, v]) => v as string),
+    hls: sources.hlsUrl || null,
+    dash: sources.dashUrl || sources.dashManifestUrl || null,
+  }
+}
+
+function matchCvhStudio(label: string, studios: string[]): string | null {
+  const lo = label.toLowerCase()
+  for (const s of studios) {
+    if (s.toLowerCase() === lo) return s
+  }
+  for (const s of studios) {
+    const sl = s.toLowerCase()
+    if (lo.includes(sl) || sl.includes(lo)) return s
+  }
+  return null
+}
+
+export async function getAnimegoStreamV2(
   cvhId: string,
   season: number,
   episode: number,
   translation: string
 ): Promise<AnimegoStream> {
-  try {
-    const apiUrl = `${ANIMEGO_BASE}/api/stream/cvh/${cvhId}?season=${season}&episode=${episode}&translation=${encodeURIComponent(translation)}`
-    const response = await fetchWithTimeout(apiUrl, {
-      timeout: 15000,
-      headers: {
-        'User-Agent': USER_AGENT,
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': ANIMEGO_BASE + '/',
-      },
-    })
+  const items = await cvhGetPlaylist(cvhId)
+  if (!items || items.length === 0) return { mp4s: [], hls: null, dash: null }
 
-    if (response.ok) {
-      const data = await response.json()
-      return {
-        mp4s: data.mp4s || data.MP4s || [],
-        hls: data.hls || data.HLS || null,
-        dash: data.dash || data.DASH || null,
-      }
-    }
-  } catch {}
+  const seasons = new Map<number, any[]>()
+  for (const item of items) {
+    const s = item.season || 1
+    if (!seasons.has(s)) seasons.set(s, [])
+    seasons.get(s)!.push(item)
+  }
 
-  return { mp4s: [], hls: null, dash: null }
+  if (seasons.size === 1) season = [...seasons.keys()][0]
+  const seasonItems = seasons.get(season)
+  if (!seasonItems) return { mp4s: [], hls: null, dash: null }
+
+  const epItems = seasonItems.filter((i: any) => i.episode === episode)
+  if (epItems.length === 0) return { mp4s: [], hls: null, dash: null }
+
+  const studios = [...new Set(epItems.map((i: any) => i.voiceStudio).filter(Boolean))] as string[]
+  const matched = matchCvhStudio(translation, studios)
+  const target = matched ? epItems.find((i: any) => i.voiceStudio === matched) : epItems[0]
+  if (!target) return { mp4s: [], hls: null, dash: null }
+
+  return cvhGetStreamByVkId(target.vkId)
 }
