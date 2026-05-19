@@ -21,10 +21,23 @@ export function setRussianCache(idMal: number, key: string, text: RussianText): 
   cache.set(cacheKey(idMal, key), text)
 }
 
+let shikimoriAvailable = true
+let lastShikimoriFail = 0
+const SHIKIMORI_COOLDOWN = 30_000
+
 async function fetchRussianByShikimori(title: string, idMal: number): Promise<{ title: string; description: string } | null> {
+  if (!shikimoriAvailable && Date.now() - lastShikimoriFail < SHIKIMORI_COOLDOWN) return null
   try {
-    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`)
-    if (!res.ok) return null
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`, { signal: controller.signal })
+    clearTimeout(timer)
+    if (!res.ok) {
+      lastShikimoriFail = Date.now()
+      if (res.status !== 404) shikimoriAvailable = false
+      return null
+    }
+    shikimoriAvailable = true
     const data = await res.json()
     if (!Array.isArray(data)) return null
     const match = data.find((a: any) => a.myanimelist_id === idMal)
@@ -36,8 +49,24 @@ async function fetchRussianByShikimori(title: string, idMal: number): Promise<{ 
     }
     return null
   } catch {
+    lastShikimoriFail = Date.now()
+    shikimoriAvailable = false
     return null
   }
+}
+
+const fetchQueue: Array<() => Promise<void>> = []
+let processing = false
+
+async function processQueue() {
+  if (processing || fetchQueue.length === 0) return
+  processing = true
+  while (fetchQueue.length > 0) {
+    const task = fetchQueue.shift()
+    if (task) await task()
+    await new Promise(r => setTimeout(r, 150))
+  }
+  processing = false
 }
 
 export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string, nameNative?: string, year?: number | null): Promise<void> {
@@ -45,19 +74,23 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
   const key = cacheKey(idMal, queries.join('|'))
   if (cache.has(key)) return Promise.resolve()
   if (pending.has(key)) return pending.get(key)!
-  const promise = (async () => {
-    try {
-      for (const q of queries) {
-        const result = await fetchRussianByShikimori(q, idMal)
-        if (result && result.title) {
-          cache.set(key, result)
-          return
+  const promise = new Promise<void>((resolve) => {
+    fetchQueue.push(async () => {
+      try {
+        for (const q of queries) {
+          const result = await fetchRussianByShikimori(q, idMal)
+          if (result && result.title) {
+            cache.set(key, result)
+            break
+          }
         }
+      } finally {
+        pending.delete(key)
+        resolve()
       }
-    } finally {
-      pending.delete(key)
-    }
-  })()
+    })
+    processQueue()
+  })
   pending.set(key, promise)
   return promise
 }

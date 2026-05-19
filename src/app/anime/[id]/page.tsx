@@ -65,36 +65,48 @@ export default function AnimePage() {
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
-          const searchTitles = [data.title?.english, data.title?.romaji, data.title?.native].filter(Boolean) as string[]
+          const searchTitles = [data.title?.romaji, data.title?.english].filter(Boolean) as string[]
           const candidates = searchTitles.flatMap(t => generateCandidateSlugs(t))
-          const uniqueSlugs = [...new Set(candidates)]
+          const uniqueSlugs = [...new Set(candidates)].slice(0, 6)
           setJutsuLoading(true)
-          for (const slug of uniqueSlugs) {
-            if (!slug) continue
-            try {
-              const jutsuUrl = buildJutsuUrl(slug)
-              const infoRes = await fetch(`/api/jutsu/info?url=${encodeURIComponent(jutsuUrl)}`)
-              if (!infoRes.ok) continue
-              const infoData = await infoRes.json()
-              if (infoData.success) {
-                setJutsuUrl(jutsuUrl)
-                const seasonData = await getSeasonEpisodeData(jutsuUrl)
-                setJutsuSeasons(seasonData)
-                const allEpisodes = seasonData.flatMap(s => s.episodes)
-                if (allEpisodes.length > 0) {
-                  setJutsuLoading(false)
+          let found: { url: string; info: any } | null = null
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 20000)
+          try {
+            found = await Promise.race([
+              ...uniqueSlugs.map(async (slug) => {
+                if (!slug) return null
+                if (controller.signal.aborted) return null
+                try {
+                  const jutsuUrl = buildJutsuUrl(slug)
+                  const infoRes = await fetch(`/api/jutsu/info?url=${encodeURIComponent(jutsuUrl)}`, {
+                    signal: controller.signal,
+                  })
+                  if (!infoRes.ok) return null
+                  const infoData = await infoRes.json()
+                  if (infoData.success) {
+                    controller.abort()
+                    return { url: jutsuUrl, info: infoData.info }
+                  }
+                  return null
+                } catch {
+                  return null
                 }
-                if (infoData.info?.title) {
-                  const queryParts = [...new Set([data.title?.native, data.title?.english, data.title?.romaji].filter(Boolean) as string[])]
-                  setRussianCache(data.idMal || 0, queryParts.join('|'), { title: infoData.info.title, description: infoData.info.description || '' })
-                }
-                if (infoData.info?.description) {
-                  setRussianDescription(infoData.info.description)
-                }
-                break
-              }
-            } catch {
-              continue
+              }),
+            ])
+          } finally {
+            clearTimeout(timeout)
+          }
+          if (found) {
+            setJutsuUrl(found.url)
+            const seasonData = await getSeasonEpisodeData(found.url)
+            setJutsuSeasons(seasonData)
+            if (found.info?.title) {
+              const queryParts = [...new Set([data.title?.native, data.title?.english, data.title?.romaji].filter(Boolean) as string[])]
+              setRussianCache(data.idMal || 0, queryParts.join('|'), { title: found.info.title, description: found.info.description || '' })
+            }
+            if (found.info?.description) {
+              setRussianDescription(found.info.description)
             }
           }
           setJutsuLoading(false)
