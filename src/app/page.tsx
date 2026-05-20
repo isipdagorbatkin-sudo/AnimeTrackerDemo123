@@ -254,8 +254,9 @@ export default function HomePage() {
       if (searchQuery) {
         const effectiveQuery = remoteSearchQuery || searchQuery.trim().toLowerCase()
         if (!effectiveQuery) return
-        const result = await searchAnime(effectiveQuery, nextPage, 20)
-        results = result.Page?.media || []
+        const result = await searchWithRussian(effectiveQuery, nextPage, 20)
+        results = result.media || []
+        setHasMore(result.hasMore)
       }
       else if (selectedGenre) {
         const result = await getAnimeByGenre(selectedGenre, nextPage, 20)
@@ -274,7 +275,7 @@ export default function HomePage() {
       }
       const newAnime = dedupeAnime(results || [])
       setAnimeList(prev => dedupeAnime([...prev, ...newAnime]))
-      setHasMore(results.length >= 20)
+      if (!searchQuery) setHasMore(results.length >= 20)
       setCurrentPage(nextPage)
     } catch (err: any) {
       console.error('Error loading more anime:', err)

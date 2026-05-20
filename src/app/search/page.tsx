@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AniListAnimeCard } from '@/components/anime/AniListAnimeCard'
-import { searchAnime, AniListAnime } from '@/lib/anilist/client'
+import { AniListAnime } from '@/lib/anilist/client'
 import { searchWithRussian } from '@/lib/search'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ export default function SearchPage() {
         .from('anime_collection')
         .select('anime_id')
         .eq('user_id', user.id)
+        .eq('source', 'anilist')
         .then(({ data }) => {
           if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
         })
@@ -48,6 +49,7 @@ export default function SearchPage() {
       .from('anime_collection')
       .select('anime_id')
       .eq('user_id', user.id)
+      .eq('source', 'anilist')
     if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
   }, [])
 
@@ -83,7 +85,7 @@ export default function SearchPage() {
         setLoading(true)
         setError('')
 
-        const result = await searchWithRussian(normalizedQuery, 1, 5)
+        const result = await searchWithRussian(normalizedQuery, 1, 20)
         if (requestIdRef.current !== requestId) return
 
         setResults(result.media)
@@ -117,10 +119,10 @@ export default function SearchPage() {
       const nextPage = currentPage + 1
       const effectiveQuery = remoteQuery || query.trim()
       if (!effectiveQuery) return
-      const result = await searchAnime(effectiveQuery, nextPage, 20)
-      const fetched = result.Page?.media || []
+      const result = await searchWithRussian(effectiveQuery, nextPage, 20)
+      const fetched = result.media || []
       setResults(prev => [...prev, ...fetched])
-      setHasMore(result.Page?.pageInfo?.hasNextPage || false)
+      setHasMore(result.hasMore)
       setCurrentPage(nextPage)
     } catch (err) {
       console.error('Error loading more results:', err)

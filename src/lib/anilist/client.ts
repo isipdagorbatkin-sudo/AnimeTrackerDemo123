@@ -198,6 +198,24 @@ export async function getAnimeById(id: number): Promise<AniListAnime | null> {
   }
 }
 
+export async function getAnimeByMalId(idMal: number): Promise<AniListAnime | null> {
+  try {
+    const data = await queryAniList<{ Media: AniListAnime }>(
+      `
+      query ($idMal: Int) {
+        Media(idMal: $idMal, type: ANIME) {
+          ${ANIME_FRAGMENT}
+        }
+      }
+      `,
+      { idMal }
+    )
+    return data.Media || null
+  } catch {
+    return null
+  }
+}
+
 export async function getTopAnime(page = 1, perPage = 20): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `

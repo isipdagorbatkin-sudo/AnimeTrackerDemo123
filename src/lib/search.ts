@@ -1,9 +1,23 @@
+import { getAnimeByMalId, searchAnime } from './anilist/client'
+import type { AniListAnime } from './anilist/client'
+
+type ShikimoriSearchItem = {
+  id?: number
+  mal_id?: number | string | null
+  myanimelist_id?: number | string | null
+  name?: string
+  russian?: string
+  english?: string[]
+  aired_on?: string | null
+  score?: string | number | null
+}
+
 export function normalizeSearchQuery(value: string): string {
-  return value.trim()
+  return value.trim().replace(/\s+/g, ' ')
 }
 
 export function hasCyrillic(value: string): boolean {
-  return /[а-яё]/i.test(value)
+  return /[\u0400-\u04ff]/i.test(value)
 }
 
 const translitMap: Record<string, string> = {
@@ -14,70 +28,129 @@ const translitMap: Record<string, string> = {
 }
 
 export function transliterateRuToLat(value: string): string {
-  const lower = value.toLowerCase()
-  let result = ''
-  for (const char of lower) {
-    result += translitMap[char] ?? char
-  }
-  return result
+  return value
+    .toLowerCase()
+    .split('')
+    .map((char) => translitMap[char] ?? char)
+    .join('')
 }
 
 export function buildSearchCandidates(query: string): string[] {
   const cleaned = normalizeSearchQuery(query)
   if (!cleaned) return []
-  if (!hasCyrillic(cleaned)) return [cleaned]
-  const translit = transliterateRuToLat(cleaned)
-  const candidates = [translit, cleaned].filter((value, index, array) => {
-    return value && array.indexOf(value) === index
-  })
-  return candidates.length > 0 ? candidates : [cleaned]
+
+  const candidates = [cleaned]
+  if (hasCyrillic(cleaned)) {
+    candidates.push(transliterateRuToLat(cleaned))
+  }
+
+  return [...new Set(candidates.filter(Boolean))]
 }
 
-import { searchAnime } from './anilist/client'
-import type { AniListAnime } from './anilist/client'
+function getShikimoriMalId(item: ShikimoriSearchItem): number | null {
+  const raw = item.mal_id ?? item.myanimelist_id ?? item.id ?? null
+  if (raw == null) return null
+  const id = typeof raw === 'number' ? raw : parseInt(raw, 10)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
 
-async function searchShikimori(query: string): Promise<string[]> {
+function getShikimoriYear(item: ShikimoriSearchItem): number {
+  if (!item.aired_on) return 0
+  const year = parseInt(item.aired_on.slice(0, 4), 10)
+  return Number.isFinite(year) ? year : 0
+}
+
+function normalizeForMatch(value: string | null | undefined): string {
+  return (value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+function rankShikimori(item: ShikimoriSearchItem, query: string): number {
+  const normalizedQuery = normalizeForMatch(query)
+  const names = [item.russian, item.name, ...(item.english || [])]
+    .map(normalizeForMatch)
+    .filter(Boolean)
+
+  let score = 0
+  for (const name of names) {
+    if (name === normalizedQuery) score += 100
+    else if (name.includes(normalizedQuery) || normalizedQuery.includes(name)) score += 45
+  }
+
+  const rating = typeof item.score === 'number' ? item.score : parseFloat(item.score || '0')
+  if (Number.isFinite(rating)) score += rating
+
+  const year = getShikimoriYear(item)
+  if (year) score += Math.min(10, Math.max(0, year - 1990) / 4)
+
+  return score
+}
+
+async function searchShikimori(query: string, limit: number): Promise<ShikimoriSearchItem[]> {
   try {
-    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(query)}&limit=10`)
+    const params = new URLSearchParams({
+      search: query,
+      limit: String(limit),
+      order: 'popularity',
+    })
+    const res = await fetch(`/api/shikimori/animes?${params.toString()}`)
     if (!res.ok) return []
     const data = await res.json()
     if (!Array.isArray(data)) return []
-    return data.map((a: any) => a.name || a.english?.[0] || '').filter(Boolean)
+    return data.sort((a, b) => rankShikimori(b, query) - rankShikimori(a, query))
   } catch {
     return []
   }
 }
 
-export async function searchWithRussian(query: string, page = 1, perPage = 20): Promise<{ media: AniListAnime[]; hasMore: boolean }> {
-  const candidates = buildSearchCandidates(query)
-  const anilistResults = await Promise.all(
-    candidates.map(c => searchAnime(c, page, perPage).then(r => r.Page?.media || []))
-  )
-  const seen = new Set<number>()
-  const allMedia = anilistResults.flat()
-  const deduped = allMedia.filter(a => {
-    if (seen.has(a.id)) return false
-    seen.add(a.id)
-    return true
-  })
-  const hasMore = deduped.length >= perPage
+function appendUnique(target: AniListAnime[], seen: Set<number>, items: AniListAnime[]) {
+  for (const item of items) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    target.push(item)
+  }
+}
 
-  if (hasCyrillic(query) || deduped.length < 3) {
-    try {
-      const shikimoriNames = await searchShikimori(query)
-      if (shikimoriNames.length > 0) {
-        const shikiSearchResults = await Promise.all(
-          shikimoriNames.map(t => searchAnime(t, 1, 5).then(r => r.Page?.media || []))
-        )
-        for (const a of shikiSearchResults.flat()) {
-          if (!seen.has(a.id)) {
-            deduped.push(a)
-            seen.add(a.id)
-          }
-        }
-      }
-    } catch {}
+async function searchAniListCandidates(candidates: string[], page: number, perPage: number): Promise<AniListAnime[]> {
+  const batches = await Promise.all(
+    candidates.map((candidate) =>
+      searchAnime(candidate, page, perPage)
+        .then((response) => response.Page?.media || [])
+        .catch(() => [])
+    )
+  )
+  return batches.flat()
+}
+
+async function searchAniListByShikimori(query: string, perPage: number): Promise<AniListAnime[]> {
+  const shikimoriResults = await searchShikimori(query, Math.max(10, perPage))
+  const malIds = [...new Set(shikimoriResults.map(getShikimoriMalId).filter(Boolean) as number[])]
+  const exactMatches = await Promise.all(malIds.map((id) => getAnimeByMalId(id)))
+  return exactMatches.filter(Boolean) as AniListAnime[]
+}
+
+export async function searchWithRussian(query: string, page = 1, perPage = 20): Promise<{ media: AniListAnime[]; hasMore: boolean }> {
+  const normalizedQuery = normalizeSearchQuery(query)
+  if (!normalizedQuery) return { media: [], hasMore: false }
+
+  const seen = new Set<number>()
+  const media: AniListAnime[] = []
+
+  if (hasCyrillic(normalizedQuery) && page === 1) {
+    appendUnique(media, seen, await searchAniListByShikimori(normalizedQuery, perPage))
   }
 
-  return { media: deduped, hasMore }
+  appendUnique(media, seen, await searchAniListCandidates(buildSearchCandidates(normalizedQuery), page, perPage))
+
+  if (!hasCyrillic(normalizedQuery) && media.length < Math.min(3, perPage) && page === 1) {
+    appendUnique(media, seen, await searchAniListByShikimori(normalizedQuery, perPage))
+  }
+
+  return {
+    media: media.slice(0, perPage),
+    hasMore: media.length > perPage || (!hasCyrillic(normalizedQuery) && media.length >= perPage),
+  }
 }
