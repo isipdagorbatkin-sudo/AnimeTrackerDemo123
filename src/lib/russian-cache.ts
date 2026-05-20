@@ -6,6 +6,17 @@ interface RussianText {
   description: string
 }
 
+type ShikimoriAnimeCandidate = {
+  id?: number
+  mal_id?: number
+  myanimelist_id?: number
+  name?: string
+  russian?: string
+  english?: string[]
+  description?: string
+  description_html?: string
+}
+
 const EMPTY_RUSSIAN_TEXT: RussianText = { title: '', description: '' }
 const cache = new Map<string, RussianText>()
 const pending = new Map<string, Promise<void>>()
@@ -42,49 +53,87 @@ function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, '').trim()
 }
 
+function normalizeTitle(value: string | null | undefined): string {
+  return (value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+function matchesTitle(anime: { name?: string; russian?: string; english?: string[] }, title: string): boolean {
+  const query = normalizeTitle(title)
+  if (!query) return false
+
+  return [anime.name, anime.russian, ...(anime.english || [])]
+    .map(normalizeTitle)
+    .some(name => name === query || name.includes(query) || query.includes(name))
+}
+
 async function fetchRussianByShikimori(title: string, idMal: number): Promise<RussianText | null> {
   if (!shikimoriAvailable && Date.now() - lastShikimoriFail < SHIKIMORI_COOLDOWN) return null
 
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 8000)
-    const params = idMal > 0
-      ? `myanimelist_id=${idMal}&limit=1`
-      : `search=${encodeURIComponent(title)}&limit=10`
-    let res = await fetch(`/api/shikimori/animes?${params}`, { signal: controller.signal })
-    if (res.ok && idMal > 0 && title) {
-      const directData = await res.clone().json().catch(() => [])
-      if (Array.isArray(directData) && directData.length === 0) {
-        res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`, { signal: controller.signal })
+
+    let match: ShikimoriAnimeCandidate | null = null
+
+    if (idMal > 0) {
+      const detailsRes = await fetch(`/api/shikimori/animes/${idMal}`, { signal: controller.signal })
+      if (detailsRes.ok) {
+        const details = await detailsRes.json().catch(() => null)
+        if (details && Number(details.id) === idMal) match = details as ShikimoriAnimeCandidate
       }
     }
+
+    if (!match && title) {
+      const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`, { signal: controller.signal })
+      if (!res.ok) {
+        lastShikimoriFail = Date.now()
+        if (res.status !== 404) shikimoriAvailable = false
+        return null
+      }
+
+      const data = await res.json()
+      if (!Array.isArray(data)) return null
+
+      if (idMal > 0) {
+        match = data.find((anime: { id?: number; mal_id?: number; myanimelist_id?: number }) => {
+          const malId = Number(anime.myanimelist_id || anime.mal_id || anime.id || 0)
+          return malId === idMal
+        }) || null
+      }
+
+      if (!match) {
+        match = data.find((anime: { name?: string; russian?: string; english?: string[] }) => matchesTitle(anime, title)) || null
+      }
+    }
+
     clearTimeout(timer)
-
-    if (!res.ok) {
-      lastShikimoriFail = Date.now()
-      if (res.status !== 404) shikimoriAvailable = false
-      return null
-    }
-
     shikimoriAvailable = true
-    const data = await res.json()
-    if (!Array.isArray(data)) return null
-
-    let match = data[0]
-    if (idMal > 0) {
-      match = data.find((anime: { id?: number; mal_id?: number; myanimelist_id?: number }) => {
-        const malId = Number(anime.myanimelist_id || anime.mal_id || anime.id || 0)
-        return malId === idMal
-      }) || data[0]
-    }
 
     if (!match) return null
+
+    if (idMal > 0) {
+      const candidateId = Number(match.myanimelist_id || match.mal_id || match.id || 0)
+      if (candidateId !== idMal && !matchesTitle(match, title)) {
+        return null
+      }
+    }
 
     if ((!match.description && !match.description_html) && match.id) {
       const detailsRes = await fetch(`/api/shikimori/animes/${match.id}`, { signal: controller.signal })
       if (detailsRes.ok) {
         const details = await detailsRes.json().catch(() => null)
-        if (details) match = { ...match, ...details }
+        if (details) match = { ...match, ...(details as ShikimoriAnimeCandidate) }
+      }
+    }
+
+    if (idMal > 0) {
+      const malId = Number(match.myanimelist_id || match.mal_id || match.id || 0)
+      if (malId !== idMal && !matchesTitle(match, title)) {
+        return null
       }
     }
 
