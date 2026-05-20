@@ -14,6 +14,7 @@ type AnimeCollection = {
   id: string
   user_id: string
   anime_id: number
+  source: string
   status: string
   rating: number | null
   review: string | null

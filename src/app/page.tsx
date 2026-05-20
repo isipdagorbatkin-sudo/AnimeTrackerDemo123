@@ -79,6 +79,7 @@ export default function HomePage() {
       .from('anime_collection')
       .select('anime_id')
       .eq('user_id', user.id)
+      .eq('source', 'anilist')
     if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
   }, [])
 
@@ -155,6 +156,7 @@ export default function HomePage() {
         .from('anime_collection')
         .select('anime_id')
         .eq('user_id', user.id)
+        .eq('source', 'anilist')
         .then(({ data }) => {
           if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
         })

@@ -43,6 +43,7 @@ export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle, on
         .select('id')
         .eq('user_id', user.id)
         .eq('anime_id', animeId)
+        .eq('source', 'anilist')
         .maybeSingle()
 
       if (existing) {
@@ -52,6 +53,7 @@ export function AddToCollectionDialog({ isOpen, onClose, animeId, animeTitle, on
       const { error } = await supabase.from('anime_collection').insert({
         user_id: user.id,
         anime_id: animeId,
+        source: 'anilist',
         status,
         rating: rating > 0 ? rating : null,
         review: review.trim() || null,

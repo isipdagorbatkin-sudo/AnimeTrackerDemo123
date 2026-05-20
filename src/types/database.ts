@@ -43,6 +43,7 @@ export interface Database {
           id: string
           user_id: string
           anime_id: number
+          source: string
           status: 'watching' | 'completed' | 'plan_to_watch' | 'dropped'
           rating: number | null
           review: string | null
@@ -53,6 +54,7 @@ export interface Database {
           id?: string
           user_id: string
           anime_id: number
+          source?: string
           status: 'watching' | 'completed' | 'plan_to_watch' | 'dropped'
           rating?: number | null
           review?: string | null
@@ -63,6 +65,7 @@ export interface Database {
           id?: string
           user_id?: string
           anime_id?: number
+          source?: string
           status?: 'watching' | 'completed' | 'plan_to_watch' | 'dropped'
           rating?: number | null
           review?: string | null

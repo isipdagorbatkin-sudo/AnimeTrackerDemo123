@@ -87,6 +87,7 @@ export default function AnimePage() {
         .select('id')
         .eq('user_id', user.id)
         .eq('anime_id', id)
+        .eq('source', 'anilist')
         .maybeSingle()
       setIsInCollection(!!data)
     } catch {}
@@ -361,6 +362,9 @@ export default function AnimePage() {
               <KodikPlayer
                 animeTitle={title || anime.title?.romaji || anime.title?.english || ''}
                 fallbackTitles={[anime.title?.romaji, anime.title?.english, anime.title?.native].filter(Boolean) as string[]}
+                idMal={anime.idMal}
+                year={anime.startDate?.year || anime.seasonYear}
+                episodes={anime.episodes}
               />
             )}
           </div>

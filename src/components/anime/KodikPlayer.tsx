@@ -1,60 +1,131 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Play } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { ChevronDown, Loader2, Play } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-const KODIK_TOKEN = '56a768d08f43091901c44b54fe970049'
-const KODIK_API = 'https://kodik-api.com/search'
-
-async function searchKodik(title: string): Promise<any[]> {
-  const url = `${KODIK_API}?token=${KODIK_TOKEN}&title=${encodeURIComponent(title)}&limit=20&with_material_data=true&with_seasons=true&with_episodes=true`
-  const res = await fetch(url, { method: 'POST' })
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.results || []
+interface KodikResult {
+  id: string
+  link: string
+  title: string
+  title_orig?: string
+  other_title?: string
+  year?: number
+  episodes_count?: number
+  last_episode?: number
+  match_score?: number
+  translation?: {
+    id: number
+    title: string
+    type: 'voice' | 'subtitles'
+  }
+  material_data?: {
+    year?: number
+    episodes_total?: number
+    episodes_aired?: number
+  }
 }
 
-export function KodikPlayer({ animeTitle, fallbackTitles }: { animeTitle: string; fallbackTitles?: string[] }) {
+interface KodikPlayerProps {
+  animeTitle: string
+  fallbackTitles?: string[]
+  idMal?: number | null
+  year?: number | null
+  episodes?: number | null
+}
+
+function getEmbedLink(result: KodikResult): string {
+  return result.link.startsWith('http') ? result.link : `https:${result.link}`
+}
+
+function getEpisodeCount(result: KodikResult): number | null {
+  return Number(
+    result.episodes_count ||
+    result.last_episode ||
+    result.material_data?.episodes_total ||
+    result.material_data?.episodes_aired ||
+    0
+  ) || null
+}
+
+function getResultLabel(result: KodikResult): string {
+  const title = result.title || result.title_orig || result.other_title || 'Kodik'
+  const releaseYear = result.year || result.material_data?.year
+  const episodeCount = getEpisodeCount(result)
+  return [title, releaseYear, episodeCount ? `${episodeCount} ep.` : null].filter(Boolean).join(' / ')
+}
+
+function resultKey(result: KodikResult): string {
+  return `${result.id}:${result.translation?.id || 'default'}:${result.link}`
+}
+
+export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes }: KodikPlayerProps) {
   const [embedUrl, setEmbedUrl] = useState<string | null>(null)
+  const [results, setResults] = useState<KodikResult[]>([])
+  const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showMenu, setShowMenu] = useState(false)
 
   const doSearch = useCallback(async (title: string) => {
     setLoading(true)
     setError('')
-    const queries = [title, ...(fallbackTitles || [])].filter((v, i, a) => v && a.indexOf(v) === i)
+    setEmbedUrl(null)
+    setResults([])
+    setSelectedId('')
+    setShowMenu(false)
 
     try {
-      let found: any = null
-      for (const q of queries) {
-        const list = await searchKodik(q)
-        if (list.length > 0) {
-          found = list[0]
-          break
-        }
-      }
+      const queries = [title, ...(fallbackTitles || [])].filter((v, i, a) => v && a.indexOf(v) === i)
+      const params = new URLSearchParams({ q: title })
+      for (const fallback of queries.slice(1)) params.append('fallback', fallback)
+      if (idMal) params.set('idMal', String(idMal))
+      if (year) params.set('year', String(year))
+      if (episodes) params.set('episodes', String(episodes))
+
+      const res = await fetch(`/api/kodik/search?${params.toString()}`)
+      const data = await res.json()
+      const list: KodikResult[] = data.success ? data.results || [] : []
+      const found = list[0]
+
       if (!found) {
-        setError(`Аниме не найдено в Kodik: "${title}"`)
-        setLoading(false)
+        setError(`Anime was not found in Kodik: "${title}"`)
         return
       }
-      setEmbedUrl(`https:${found.link}`)
-      setLoading(false)
-    } catch (err: any) {
-      setError('Ошибка: ' + (err.message || 'неизвестная'))
+
+      setResults(list.slice(0, 12))
+      setSelectedId(resultKey(found))
+      setEmbedUrl(getEmbedLink(found))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'unknown'
+      setError(`Kodik error: ${message}`)
+    } finally {
       setLoading(false)
     }
-  }, [fallbackTitles])
+  }, [episodes, fallbackTitles, idMal, year])
 
   useEffect(() => {
-    if (animeTitle) doSearch(animeTitle)
+    if (!animeTitle) return
+    const timer = window.setTimeout(() => {
+      void doSearch(animeTitle)
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [animeTitle, doSearch])
+
+  const handleSelect = (result: KodikResult) => {
+    setSelectedId(resultKey(result))
+    setEmbedUrl(getEmbedLink(result))
+    setShowMenu(false)
+  }
+
+  const selected = results.find((result) => resultKey(result) === selectedId)
 
   return (
     <div className="space-y-4">
       <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
         {embedUrl ? (
           <iframe
+            key={embedUrl}
             src={embedUrl}
             className="w-full h-full"
             allowFullScreen
@@ -66,7 +137,7 @@ export function KodikPlayer({ animeTitle, fallbackTitles }: { animeTitle: string
             {loading ? (
               <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Поиск...</p>
+                <p className="text-sm text-muted-foreground">Searching Kodik...</p>
               </div>
             ) : (
               <div className="text-center p-4">
@@ -77,6 +148,43 @@ export function KodikPlayer({ animeTitle, fallbackTitles }: { animeTitle: string
           </div>
         )}
       </div>
+
+      {results.length > 1 && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMenu(v => !v)}
+            className="flex max-w-full items-center gap-2 rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-left text-sm hover:border-primary/40"
+          >
+            <span className="truncate">
+              {selected?.translation?.title || 'Kodik'}: {selected ? getResultLabel(selected) : 'select source'}
+            </span>
+            <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', showMenu && 'rotate-180')} />
+          </button>
+          {showMenu && (
+            <div className="absolute left-0 top-full z-20 mt-1 max-h-80 w-full min-w-[280px] overflow-y-auto rounded-xl border border-border/50 bg-card py-1 shadow-xl">
+              {results.map((result) => {
+                const key = resultKey(result)
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSelect(result)}
+                    className={cn(
+                      'w-full px-4 py-2 text-left text-sm transition-colors hover:bg-muted/50',
+                      key === selectedId && 'font-medium text-primary'
+                    )}
+                  >
+                    <span className="block truncate">{result.translation?.title || 'Kodik'}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{getResultLabel(result)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="text-destructive bg-destructive/10 px-4 py-2 rounded-lg text-sm">{error}</div>
       )}
