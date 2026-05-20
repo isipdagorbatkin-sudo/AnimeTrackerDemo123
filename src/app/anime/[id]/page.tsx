@@ -13,7 +13,7 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
-import { useRussianTitle } from '@/lib/russian-cache'
+import { useRussianText } from '@/lib/russian-cache'
 import { KodikPlayer } from '@/components/anime/KodikPlayer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -42,7 +42,6 @@ export default function AnimePage() {
   const [similar, setSimilar] = useState<AniListAnime[]>([])
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
-  const [russianDescription, setRussianDescription] = useState('')
   const [animegoEnabled, setAnimegoEnabled] = useState(false)
 
   useEffect(() => {
@@ -103,10 +102,11 @@ export default function AnimePage() {
     }
   }
 
-  const title = useRussianTitle(anime)
+  const russianText = useRussianText(anime)
+  const title = russianText.title || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
   const nativeTitle = anime?.title?.native || ''
   const year = anime?.startDate?.year
-  const description = russianDescription || anime?.description?.replace(/<[^>]+>/g, '') || ''
+  const description = russianText.description || anime?.description?.replace(/<[^>]+>/g, '') || ''
   const score = anime?.meanScore || anime?.averageScore || 0
 
   if (!mounted || loading) {

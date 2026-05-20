@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { AniListAnime } from './anilist/client'
 
 interface RussianText {
@@ -6,6 +6,7 @@ interface RussianText {
   description: string
 }
 
+const EMPTY_RUSSIAN_TEXT: RussianText = { title: '', description: '' }
 const cache = new Map<string, RussianText>()
 const pending = new Map<string, Promise<void>>()
 
@@ -13,13 +14,20 @@ function cacheKey(idMal: number, title: string): string {
   return `${idMal}:${title}`
 }
 
-function getCacheKey(anime: AniListAnime): string {
+function getAnimeCacheKey(anime: AniListAnime | null): string {
+  if (!anime) return ''
   const queries = [...new Set([anime.title?.native, anime.title?.english, anime.title?.romaji].filter(Boolean) as string[])]
-  return cacheKey(anime.idMal || anime.id, queries.join('|'))
+  return cacheKey(anime.idMal || anime.id || 0, queries.join('|'))
 }
 
-export function getRussianText(idMal: number, title: string): RussianText | null {
-  return cache.get(cacheKey(idMal, title)) || null
+export function getRussianText(idMal: number, title = ''): RussianText | null {
+  if (title) return cache.get(cacheKey(idMal, title)) || null
+
+  const prefix = `${idMal}:`
+  for (const [key, value] of cache.entries()) {
+    if (key.startsWith(prefix)) return value
+  }
+  return null
 }
 
 export function setRussianCache(idMal: number, key: string, text: RussianText): void {
@@ -30,29 +38,60 @@ let shikimoriAvailable = true
 let lastShikimoriFail = 0
 const SHIKIMORI_COOLDOWN = 30_000
 
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]+>/g, '').trim()
+}
+
 async function fetchRussianByShikimori(title: string, idMal: number): Promise<RussianText | null> {
   if (!shikimoriAvailable && Date.now() - lastShikimoriFail < SHIKIMORI_COOLDOWN) return null
+
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 8000)
-    const res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`, { signal: controller.signal })
+    const params = idMal > 0
+      ? `myanimelist_id=${idMal}&limit=1`
+      : `search=${encodeURIComponent(title)}&limit=10`
+    let res = await fetch(`/api/shikimori/animes?${params}`, { signal: controller.signal })
+    if (res.ok && idMal > 0 && title) {
+      const directData = await res.clone().json().catch(() => [])
+      if (Array.isArray(directData) && directData.length === 0) {
+        res = await fetch(`/api/shikimori/animes?search=${encodeURIComponent(title)}&limit=10`, { signal: controller.signal })
+      }
+    }
     clearTimeout(timer)
+
     if (!res.ok) {
       lastShikimoriFail = Date.now()
       if (res.status !== 404) shikimoriAvailable = false
       return null
     }
+
     shikimoriAvailable = true
     const data = await res.json()
     if (!Array.isArray(data)) return null
-    const match = idMal > 0 ? data.find((a: any) => a.myanimelist_id === idMal) : data[0]
-    if (match) {
-      return {
-        title: match.russian || '',
-        description: (match.description || '').replace(/<[^>]+>/g, ''),
+
+    let match = data[0]
+    if (idMal > 0) {
+      match = data.find((anime: { id?: number; mal_id?: number; myanimelist_id?: number }) => {
+        const malId = Number(anime.myanimelist_id || anime.mal_id || anime.id || 0)
+        return malId === idMal
+      }) || data[0]
+    }
+
+    if (!match) return null
+
+    if ((!match.description && !match.description_html) && match.id) {
+      const detailsRes = await fetch(`/api/shikimori/animes/${match.id}`, { signal: controller.signal })
+      if (detailsRes.ok) {
+        const details = await detailsRes.json().catch(() => null)
+        if (details) match = { ...match, ...details }
       }
     }
-    return null
+
+    return {
+      title: match.russian || match.name || '',
+      description: stripHtml(match.description || match.description_html || ''),
+    }
   } catch {
     lastShikimoriFail = Date.now()
     shikimoriAvailable = false
@@ -69,7 +108,7 @@ async function processQueue() {
   while (fetchQueue.length > 0) {
     const task = fetchQueue.shift()
     if (task) await task()
-    await new Promise(r => setTimeout(r, 200))
+    await new Promise(resolve => setTimeout(resolve, 200))
   }
   processing = false
 }
@@ -79,12 +118,13 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
   const key = cacheKey(idMal, queries.join('|'))
   if (cache.has(key)) return Promise.resolve()
   if (pending.has(key)) return pending.get(key)!
+
   const promise = new Promise<void>((resolve) => {
     fetchQueue.push(async () => {
       try {
-        for (const q of queries) {
-          const shikiResult = await fetchRussianByShikimori(q, idMal)
-          if (shikiResult && shikiResult.title) {
+        for (const query of queries.length > 0 ? queries : ['']) {
+          const shikiResult = await fetchRussianByShikimori(query, idMal)
+          if (shikiResult && (shikiResult.title || shikiResult.description)) {
             cache.set(key, shikiResult)
             break
           }
@@ -96,28 +136,39 @@ export function fetchRussianText(idMal: number, nameEn?: string, nameJp?: string
     })
     processQueue()
   })
+
   pending.set(key, promise)
   return promise
 }
 
-export function useRussianTitle(anime: AniListAnime | null): string {
-  const [russianTitle, setRussianTitle] = useState('')
+export function useRussianText(anime: AniListAnime | null): RussianText {
+  const [russianText, setRussianText] = useState<RussianText>(EMPTY_RUSSIAN_TEXT)
   const idMal = anime?.idMal
   const nameEn = anime?.title?.english
   const nameJp = anime?.title?.romaji
   const nameNative = anime?.title?.native
 
   useEffect(() => {
-    if (!nameEn && !nameJp && !nameNative) return
-    const queries = [...new Set([nameEn, nameJp, nameNative].filter(Boolean) as string[])]
-    const key = cacheKey(idMal || 0, queries.join('|'))
-    const cached = getRussianText(idMal || 0, queries.join('|'))
-    if (cached) { setRussianTitle(cached.title); return }
-    fetchRussianText(idMal || 0, nameEn, nameJp, nameNative).then(() => {
-      const r = getRussianText(idMal || 0, queries.join('|'))
-      if (r) setRussianTitle(r.title)
-    })
-  }, [idMal, nameEn, nameJp, nameNative])
+    if (!anime || (!idMal && !nameEn && !nameJp && !nameNative)) return
 
-  return russianTitle || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
+    const queries = [...new Set([nameEn, nameJp, nameNative].filter(Boolean) as string[])]
+    const key = getAnimeCacheKey(anime)
+    const cached = cache.get(key) || getRussianText(idMal || anime.id || 0, queries.join('|'))
+    if (cached) {
+      const timer = window.setTimeout(() => setRussianText(cached), 0)
+      return () => window.clearTimeout(timer)
+    }
+
+    fetchRussianText(idMal || anime.id || 0, nameEn, nameJp, nameNative).then(() => {
+      const result = cache.get(key) || getRussianText(idMal || anime.id || 0, queries.join('|'))
+      if (result) setRussianText(result)
+    })
+  }, [anime, idMal, nameEn, nameJp, nameNative])
+
+  return russianText
+}
+
+export function useRussianTitle(anime: AniListAnime | null): string {
+  const russianText = useRussianText(anime)
+  return russianText.title || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
 }
