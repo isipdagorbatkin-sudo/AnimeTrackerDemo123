@@ -15,6 +15,7 @@ import {
 } from '@/lib/anilist/client'
 import { useRussianText } from '@/lib/russian-cache'
 import { KodikPlayer } from '@/components/anime/KodikPlayer'
+import { AnimeFramesStrip } from '@/components/anime/AnimeFramesStrip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -369,6 +370,20 @@ export default function AnimePage() {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Кадры из аниме
+            </h3>
+            <AnimeFramesStrip
+              title={title || anime.title?.romaji || anime.title?.english || ''}
+              fallbackTitles={[anime.title?.romaji, anime.title?.english, anime.title?.native].filter(Boolean) as string[]}
+              idMal={anime.idMal}
+              year={anime.startDate?.year || anime.seasonYear}
+              episodes={anime.episodes}
+            />
           </div>
 
           <div className="lg:col-span-3 mt-8 w-full overflow-hidden">

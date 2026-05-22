@@ -12,13 +12,11 @@ import {
   getMovies,
   getAnimeByGenre,
   getRandomAnime,
-  getAnimeCharacters,
-  AniListCharacter,
 } from '@/lib/anilist/client'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, UserRound, RotateCcw, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, Images, RotateCcw, CheckCircle2, XCircle } from 'lucide-react'
 import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
 import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
@@ -30,7 +28,7 @@ import { motion } from 'framer-motion'
 import { useRussianText } from '@/lib/russian-cache'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
-type GuessMode = 'description' | 'character'
+type GuessMode = 'description' | 'frames'
 
 function dedupeAnime(list: AniListAnime[]): AniListAnime[] {
   const seen = new Set<number>()
@@ -55,6 +53,28 @@ function stripHtml(value: string | null): string {
     .replace(/<\/?[^>]+(>|$)/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+async function fetchAnimeFrames(anime: AniListAnime): Promise<string[]> {
+  const title = anime.title?.romaji || anime.title?.english || anime.title?.native || ''
+  if (!title) return []
+
+  const params = new URLSearchParams({ q: title })
+  for (const fallback of [anime.title?.english, anime.title?.native].filter(Boolean) as string[]) {
+    if (fallback !== title) params.append('fallback', fallback)
+  }
+  if (anime.idMal) params.set('idMal', String(anime.idMal))
+  if (anime.startDate?.year || anime.seasonYear) params.set('year', String(anime.startDate?.year || anime.seasonYear))
+  if (anime.episodes) params.set('episodes', String(anime.episodes))
+
+  try {
+    const res = await fetch(`/api/kodik/search?${params.toString()}`)
+    const data = await res.json()
+    const frames = (data.results || []).flatMap((result: { screenshots?: string[] }) => result.screenshots || [])
+    return [...new Set(frames)].filter(Boolean).slice(0, 4) as string[]
+  } catch {
+    return []
+  }
 }
 
 const tabConfig = [
@@ -83,7 +103,7 @@ export default function HomePage() {
   const genreLoaderRef = useRef<() => Promise<void>>()
 
   const [guessAnime, setGuessAnime] = useState<AniListAnime | null>(null)
-  const [guessCharacters, setGuessCharacters] = useState<AniListCharacter[]>([])
+  const [guessFrames, setGuessFrames] = useState<string[]>([])
   const [guessMode, setGuessMode] = useState<GuessMode>('description')
   const [guessStep, setGuessStep] = useState<'loading' | 'ready' | 'result'>('loading')
   const [guessInput, setGuessInput] = useState('')
@@ -137,11 +157,12 @@ export default function HomePage() {
     setGuessInput('')
     setGuessMessage('')
     setGuessSearchResults([])
+    setGuessFrames([])
     setUsedHints(0)
     try {
       let anime: AniListAnime | null = null
       let fallbackAnime: AniListAnime | null = null
-      let characters: AniListCharacter[] = []
+      let frames: string[] = []
       let attempts = 0
 
       while (attempts < 8) {
@@ -156,10 +177,10 @@ export default function HomePage() {
             break
           }
         } else {
-          const loadedCharacters = await getAnimeCharacters(candidate.id)
-          if (loadedCharacters.length > 0) {
+          const loadedFrames = await fetchAnimeFrames(candidate)
+          if (loadedFrames.length > 0) {
             anime = candidate
-            characters = loadedCharacters
+            frames = loadedFrames
             break
           }
         }
@@ -169,7 +190,7 @@ export default function HomePage() {
         anime = fallbackAnime
       }
 
-      if (!anime && mode === 'character') {
+      if (!anime && mode === 'frames') {
         anime = fallbackAnime
       }
 
@@ -179,7 +200,7 @@ export default function HomePage() {
         return
       }
       setGuessAnime(anime)
-      setGuessCharacters(characters)
+      setGuessFrames(frames)
       setGuessStep('ready')
     } catch {
       setGuessMessage('Ошибка загрузки. Попробуйте снова.')
@@ -605,7 +626,7 @@ export default function HomePage() {
                     <div className="grid gap-2 sm:grid-cols-2 mb-6">
                       {[
                         { value: 'description' as GuessMode, label: 'По описанию', icon: FileText, text: 'Узнай тайтл по синопсису и жанрам.' },
-                        { value: 'character' as GuessMode, label: 'По герою', icon: UserRound, text: 'Узнай аниме по фото главного персонажа.' },
+                        { value: 'frames' as GuessMode, label: 'По кадрам', icon: Images, text: 'Узнай аниме по одному-двум кадрам.' },
                       ].map((mode) => {
                         const Icon = mode.icon
                         const active = guessMode === mode.value
@@ -662,23 +683,29 @@ export default function HomePage() {
                           </div>
                         )}
 
-                        {guessMode === 'character' && (
+                        {guessMode === 'frames' && (
                           <div className="flex flex-col items-center text-center">
-                            <img
-                              src={getProxiedImageUrl(guessCharacters[0]?.image?.large || guessAnime?.coverImage?.extraLarge || guessAnime?.coverImage?.large || '')}
-                              alt={guessCharacters[0]?.name?.full || 'Подсказка по аниме'}
-                              className="h-56 w-56 rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-border"
-                            />
-                            {guessCharacters[0] ? (
-                              <div className="mt-4 text-sm text-muted-foreground">
-                                Персонаж: <span className="font-semibold text-foreground">{guessCharacters[0].name?.full}</span>
+                            {guessFrames.length > 0 ? (
+                              <div className="grid w-full gap-3 sm:grid-cols-2">
+                                {guessFrames.slice(0, 2).map((frame, index) => (
+                                  <img
+                                    key={frame}
+                                    src={frame}
+                                    alt={`Кадр ${index + 1}`}
+                                    className="h-40 w-full rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-border sm:h-48"
+                                  />
+                                ))}
                               </div>
                             ) : (
-                              <div className="mt-4 text-sm text-muted-foreground">
-                                Персонаж не найден, но постер остался как подсказка.
-                              </div>
+                              <img
+                                src={getProxiedImageUrl(guessAnime?.coverImage?.extraLarge || guessAnime?.coverImage?.large || '')}
+                                alt="Постер-подсказка"
+                                className="h-56 w-40 rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-border"
+                              />
                             )}
-                            <p className="mt-1 text-xs text-muted-foreground">Из какого это аниме?</p>
+                            <p className="mt-4 text-xs text-muted-foreground">
+                              {guessFrames.length > 0 ? 'Из какого аниме эти кадры?' : 'Кадры не нашлись, держи постер как запасную подсказку.'}
+                            </p>
                           </div>
                         )}
                       </div>

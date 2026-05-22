@@ -14,6 +14,7 @@ interface KodikResult {
   episodes_count?: number
   last_episode?: number
   match_score?: number
+  screenshots?: string[]
   translation?: {
     id: number
     title: string
