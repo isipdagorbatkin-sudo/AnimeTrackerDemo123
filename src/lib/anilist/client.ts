@@ -57,6 +57,8 @@ export interface AniListSearchResponse {
   }
 }
 
+export type AnimeSortOption = 'POPULARITY_DESC' | 'SCORE_DESC' | 'START_DATE_DESC' | 'START_DATE' | 'TITLE_ROMAJI'
+
 export interface AniListCharactersResponse {
   Media: {
     characters: {
@@ -158,12 +160,12 @@ async function queryAniList<T>(query: string, variables: Record<string, unknown>
   return body.data
 }
 
-export async function searchAnime(query: string, page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function searchAnime(query: string, page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($search: String, $page: Int, $perPage: Int) {
+    query ($search: String, $page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(search: $search, type: ANIME, sort: POPULARITY_DESC) {
+        media(search: $search, type: ANIME, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -176,7 +178,7 @@ export async function searchAnime(query: string, page = 1, perPage = 20): Promis
       }
     }
     `,
-    { search: query, page, perPage }
+    { search: query, page, perPage, sort: [sort] }
   )
 }
 
@@ -216,12 +218,12 @@ export async function getAnimeByMalId(idMal: number): Promise<AniListAnime | nul
   }
 }
 
-export async function getTopAnime(page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getTopAnime(page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($page: Int, $perPage: Int) {
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, sort: POPULARITY_DESC) {
+        media(type: ANIME, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -234,16 +236,16 @@ export async function getTopAnime(page = 1, perPage = 20): Promise<AniListSearch
       }
     }
     `,
-    { page, perPage }
+    { page, perPage, sort: [sort] }
   )
 }
 
-export async function getAiringAnime(page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getAiringAnime(page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($page: Int, $perPage: Int) {
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC) {
+        media(type: ANIME, status: RELEASING, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -256,16 +258,16 @@ export async function getAiringAnime(page = 1, perPage = 20): Promise<AniListSea
       }
     }
     `,
-    { page, perPage }
+    { page, perPage, sort: [sort] }
   )
 }
 
-export async function getUpcomingAnime(page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getUpcomingAnime(page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($page: Int, $perPage: Int) {
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
+        media(type: ANIME, status: NOT_YET_RELEASED, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -278,16 +280,16 @@ export async function getUpcomingAnime(page = 1, perPage = 20): Promise<AniListS
       }
     }
     `,
-    { page, perPage }
+    { page, perPage, sort: [sort] }
   )
 }
 
-export async function getCompletedAnime(page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getCompletedAnime(page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($page: Int, $perPage: Int) {
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, status: FINISHED, sort: POPULARITY_DESC) {
+        media(type: ANIME, status: FINISHED, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -300,16 +302,16 @@ export async function getCompletedAnime(page = 1, perPage = 20): Promise<AniList
       }
     }
     `,
-    { page, perPage }
+    { page, perPage, sort: [sort] }
   )
 }
 
-export async function getMovies(page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getMovies(page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($page: Int, $perPage: Int) {
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, format: MOVIE, sort: POPULARITY_DESC) {
+        media(type: ANIME, format: MOVIE, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -322,16 +324,16 @@ export async function getMovies(page = 1, perPage = 20): Promise<AniListSearchRe
       }
     }
     `,
-    { page, perPage }
+    { page, perPage, sort: [sort] }
   )
 }
 
-export async function getAnimeByGenre(genre: string, page = 1, perPage = 20): Promise<AniListSearchResponse> {
+export async function getAnimeByGenre(genre: string, page = 1, perPage = 20, sort: AnimeSortOption = 'POPULARITY_DESC'): Promise<AniListSearchResponse> {
   return queryAniList<AniListSearchResponse>(
     `
-    query ($genre: String, $page: Int, $perPage: Int) {
+    query ($genre: String, $page: Int, $perPage: Int, $sort: [MediaSort]) {
       Page(page: $page, perPage: $perPage) {
-        media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) {
+        media(type: ANIME, genre: $genre, sort: $sort) {
           ${ANIME_FRAGMENT}
         }
         pageInfo {
@@ -344,7 +346,7 @@ export async function getAnimeByGenre(genre: string, page = 1, perPage = 20): Pr
       }
     }
     `,
-    { genre, page, perPage }
+    { genre, page, perPage, sort: [sort] }
   )
 }
 

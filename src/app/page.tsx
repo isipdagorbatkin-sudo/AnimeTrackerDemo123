@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { AniListAnimeCard } from '@/components/anime/AniListAnimeCard'
 import {
   AniListAnime,
+  AniListSearchResponse,
+  AnimeSortOption,
   searchAnime,
   getTopAnime,
   getAiringAnime,
@@ -16,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, Images, RotateCcw, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, Images, RotateCcw, CheckCircle2, XCircle, SlidersHorizontal } from 'lucide-react'
 import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
 import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
@@ -29,6 +31,33 @@ import { useRussianText } from '@/lib/russian-cache'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 type GuessMode = 'description' | 'frames'
+
+const sortOptions: { value: AnimeSortOption; label: string }[] = [
+  { value: 'POPULARITY_DESC', label: 'По популярности' },
+  { value: 'SCORE_DESC', label: 'По рейтингу' },
+  { value: 'START_DATE_DESC', label: 'Сначала новые' },
+  { value: 'START_DATE', label: 'Сначала старые' },
+  { value: 'TITLE_ROMAJI', label: 'По названию' },
+]
+
+function sortAnimeLocally(list: AniListAnime[], sort: AnimeSortOption): AniListAnime[] {
+  const score = (anime: AniListAnime) => anime.meanScore || anime.averageScore || 0
+  const dateValue = (anime: AniListAnime) => {
+    const year = anime.startDate?.year || anime.seasonYear || 0
+    const month = anime.startDate?.month || 0
+    const day = anime.startDate?.day || 0
+    return year * 10000 + month * 100 + day
+  }
+  const title = (anime: AniListAnime) => anime.title?.romaji || anime.title?.english || anime.title?.native || ''
+
+  return [...list].sort((a, b) => {
+    if (sort === 'SCORE_DESC') return score(b) - score(a)
+    if (sort === 'START_DATE_DESC') return dateValue(b) - dateValue(a)
+    if (sort === 'START_DATE') return dateValue(a) - dateValue(b)
+    if (sort === 'TITLE_ROMAJI') return title(a).localeCompare(title(b))
+    return 0
+  })
+}
 
 function dedupeAnime(list: AniListAnime[]): AniListAnime[] {
   const seen = new Set<number>()
@@ -94,6 +123,7 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [selectedGenre, setSelectedGenre] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<AnimeSortOption>('POPULARITY_DESC')
   const [isGenreDialogOpen, setIsGenreDialogOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -134,11 +164,11 @@ export default function HomePage() {
       setError('')
       let results: AniListSearchResponse
       switch (activeTab) {
-        case 'airing': results = await getAiringAnime(page, 20); break
-        case 'upcoming': results = await getUpcomingAnime(page, 20); break
-        case 'completed': results = await getCompletedAnime(page, 20); break
-        case 'movies': results = await getMovies(page, 20); break
-        case 'top': default: results = await getTopAnime(page, 20); break
+        case 'airing': results = await getAiringAnime(page, 20, sortBy); break
+        case 'upcoming': results = await getUpcomingAnime(page, 20, sortBy); break
+        case 'completed': results = await getCompletedAnime(page, 20, sortBy); break
+        case 'movies': results = await getMovies(page, 20, sortBy); break
+        case 'top': default: results = await getTopAnime(page, 20, sortBy); break
       }
       const newAnime = dedupeAnime(results.Page?.media || [])
       setAnimeList(prev => append ? dedupeAnime([...prev, ...newAnime]) : newAnime)
@@ -150,7 +180,7 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [activeTab])
+  }, [activeTab, sortBy])
 
   const startGuessGame = useCallback(async (mode: GuessMode = guessMode) => {
     setGuessStep('loading')
@@ -245,7 +275,7 @@ export default function HomePage() {
       try {
         setLoading(true)
         setError('')
-        const results = await getAnimeByGenre(selectedGenre, 1, 20)
+        const results = await getAnimeByGenre(selectedGenre, 1, 20, sortBy)
         setAnimeList(dedupeAnime(results.Page?.media || []))
         setHasMore(results.Page?.pageInfo?.hasNextPage || false)
         setCurrentPage(1)
@@ -258,7 +288,7 @@ export default function HomePage() {
     }
     genreLoaderRef.current = loadAnimeByGenre
     loadAnimeByGenre()
-  }, [selectedGenre, activeTab])
+  }, [selectedGenre, activeTab, sortBy])
 
   useEffect(() => {
     clearTimeout(guessSearchTimeoutRef.current)
@@ -303,7 +333,7 @@ export default function HomePage() {
       return
     }
 
-    const cacheKey = normalizedQuery
+    const cacheKey = `${normalizedQuery}:${sortBy}`
     const cached = searchCacheRef.current.get(cacheKey)
     if (cached) {
       setAnimeList(cached.results)
@@ -322,13 +352,13 @@ export default function HomePage() {
         const result = await searchWithRussian(normalizedQuery, 1, 20)
         if (requestIdRef.current !== requestId) return
 
-        setAnimeList(result.media)
+        setAnimeList(sortAnimeLocally(result.media, sortBy))
         setHasMore(result.hasMore)
         setRemoteSearchQuery(normalizedQuery)
         setCurrentPage(1)
 
         searchCacheRef.current.set(cacheKey, {
-          results: result.media,
+          results: sortAnimeLocally(result.media, sortBy),
           hasMore: result.hasMore,
           remoteQuery: normalizedQuery,
         })
@@ -344,7 +374,7 @@ export default function HomePage() {
       }
     }, 400)
     return () => clearTimeout(searchTimeoutRef.current)
-  }, [searchQuery, selectedGenre])
+  }, [searchQuery, selectedGenre, sortBy])
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore || activeTab === 'guess') return
@@ -356,21 +386,21 @@ export default function HomePage() {
         const effectiveQuery = remoteSearchQuery || searchQuery.trim().toLowerCase()
         if (!effectiveQuery) return
         const result = await searchWithRussian(effectiveQuery, nextPage, 20)
-        results = result.media || []
+        results = sortAnimeLocally(result.media || [], sortBy)
         setHasMore(result.hasMore)
       }
       else if (selectedGenre) {
-        const result = await getAnimeByGenre(selectedGenre, nextPage, 20)
+        const result = await getAnimeByGenre(selectedGenre, nextPage, 20, sortBy)
         results = result.Page?.media || []
       }
       else {
         let result: AniListSearchResponse
         switch (activeTab) {
-          case 'airing': result = await getAiringAnime(nextPage, 20); break
-          case 'upcoming': result = await getUpcomingAnime(nextPage, 20); break
-          case 'completed': result = await getCompletedAnime(nextPage, 20); break
-          case 'movies': result = await getMovies(nextPage, 20); break
-          case 'top': default: result = await getTopAnime(nextPage, 20); break
+          case 'airing': result = await getAiringAnime(nextPage, 20, sortBy); break
+          case 'upcoming': result = await getUpcomingAnime(nextPage, 20, sortBy); break
+          case 'completed': result = await getCompletedAnime(nextPage, 20, sortBy); break
+          case 'movies': result = await getMovies(nextPage, 20, sortBy); break
+          case 'top': default: result = await getTopAnime(nextPage, 20, sortBy); break
         }
         results = result.Page?.media || []
       }
@@ -383,7 +413,7 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, currentPage, searchQuery, remoteSearchQuery, selectedGenre, activeTab])
+  }, [loading, hasMore, currentPage, searchQuery, remoteSearchQuery, selectedGenre, activeTab, sortBy])
 
   useEffect(() => {
     if (activeTab === 'guess') return
@@ -526,7 +556,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.18 }}
           >
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
               <div className="flex-1 relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -537,7 +567,27 @@ export default function HomePage() {
                   className="pl-10 h-11 bg-background/60 border-border/70 text-sm focus-visible:ring-primary/40"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <label className="relative h-11 min-w-[210px]">
+                  <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value as AnimeSortOption)
+                      setCurrentPage(1)
+                    }}
+                    disabled={activeTab === 'guess'}
+                    className="h-11 w-full appearance-none rounded-xl border border-primary/25 bg-background/60 pl-9 pr-9 text-sm text-foreground outline-none transition-colors hover:border-primary/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Сортировка"
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </label>
                 <Button
                   size="lg"
                   variant="outline"

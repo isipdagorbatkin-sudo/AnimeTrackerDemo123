@@ -3,11 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { AniListAnimeCard } from '@/components/anime/AniListAnimeCard'
-import { AniListAnime, getAnimeByGenre } from '@/lib/anilist/client'
-import { Loader2, ArrowLeft, Filter } from 'lucide-react'
+import { AnimeSortOption, AniListAnime, getAnimeByGenre } from '@/lib/anilist/client'
+import { Loader2, ArrowLeft, Filter, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { translateGenre } from '@/lib/genres'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+
+const sortOptions: { value: AnimeSortOption; label: string }[] = [
+  { value: 'POPULARITY_DESC', label: 'По популярности' },
+  { value: 'SCORE_DESC', label: 'По рейтингу' },
+  { value: 'START_DATE_DESC', label: 'Сначала новые' },
+  { value: 'START_DATE', label: 'Сначала старые' },
+  { value: 'TITLE_ROMAJI', label: 'По названию' },
+]
 
 export default function GenrePage() {
   const params = useParams()
@@ -18,6 +26,7 @@ export default function GenrePage() {
   const [mounted, setMounted] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [sortBy, setSortBy] = useState<AnimeSortOption>('POPULARITY_DESC')
 
   useEffect(() => {
     setMounted(true)
@@ -31,7 +40,7 @@ export default function GenrePage() {
         setLoading(true)
         setError('')
 
-        const data = await getAnimeByGenre(genre, 1, 20)
+        const data = await getAnimeByGenre(genre, 1, 20, sortBy)
         setAnimeList(data.Page?.media || [])
         setHasMore(data.Page?.pageInfo?.hasNextPage || false)
         setCurrentPage(1)
@@ -44,7 +53,7 @@ export default function GenrePage() {
     }
 
     loadAnime()
-  }, [genre, mounted])
+  }, [genre, mounted, sortBy])
 
   const loadMore = async () => {
     if (loading || !hasMore) return
@@ -52,7 +61,7 @@ export default function GenrePage() {
     try {
       setLoading(true)
       const nextPage = currentPage + 1
-      const data = await getAnimeByGenre(genre, nextPage, 20)
+      const data = await getAnimeByGenre(genre, nextPage, 20, sortBy)
       setAnimeList(prev => [...prev, ...(data.Page?.media || [])])
       setHasMore(data.Page?.pageInfo?.hasNextPage || false)
       setCurrentPage(nextPage)
@@ -102,6 +111,27 @@ export default function GenrePage() {
 
       <section className="px-4 pb-16">
         <div className="container mx-auto">
+          <div className="mb-6 flex justify-end">
+            <label className="relative h-11 w-full max-w-[240px]">
+              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as AnimeSortOption)
+                  setCurrentPage(1)
+                }}
+                className="h-11 w-full appearance-none rounded-xl border border-primary/25 bg-background/70 pl-9 pr-9 text-sm text-foreground outline-none transition-colors hover:border-primary/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                aria-label="Сортировка"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </label>
+          </div>
           {loading && animeList.length === 0 ? (
             <div className="flex items-center justify-center py-32">
               <div className="relative">
