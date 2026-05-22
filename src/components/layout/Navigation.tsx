@@ -39,23 +39,23 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 hidden md:flex flex-col h-screen bg-sidebar/90 border-r border-sidebar-border backdrop-blur-xl shadow-2xl shadow-black/30 transition-all duration-200',
+        'fixed left-0 top-0 z-40 hidden md:flex flex-col h-screen bg-sidebar/88 border-r border-sidebar-border backdrop-blur-xl shadow-2xl shadow-black/30 transition-all duration-300',
         collapsed ? 'w-[68px]' : 'w-60'
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.18),transparent_45%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(200,143,90,0.1),transparent_42%)]" />
       {/* Logo */}
       <div className={cn(
         'relative z-10 flex items-center border-b border-sidebar-border h-14',
         collapsed ? 'justify-center' : 'px-4'
       )}>
         {collapsed ? (
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-lg shadow-primary/30">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
             <Flame className="h-4 w-4 text-white" />
           </div>
         ) : (
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shrink-0 shadow-lg shadow-primary/30">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
               <Flame className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
@@ -106,7 +106,7 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
                 'group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 w-full',
                 collapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-3 h-9',
                 isActive
-                  ? 'bg-primary/15 text-sidebar-foreground shadow-[0_0_20px_rgba(168,85,247,0.2)]'
+                  ? 'bg-primary/15 text-sidebar-foreground shadow-[0_0_20px_rgba(200,143,90,0.16)]'
                   : 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent'
               )}
             >

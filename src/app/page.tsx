@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { searchWithRussian } from '@/lib/search'
+import { motion } from 'framer-motion'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 
@@ -331,61 +332,84 @@ const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
 
   return (
     <div>
-      <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8">
+      <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-8">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-36 -right-40 h-[480px] w-[480px] rounded-full bg-purple-500/15 blur-[120px]" />
-          <div className="absolute -bottom-40 -left-32 h-[360px] w-[360px] rounded-full bg-cyan-400/10 blur-[110px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.16),transparent_45%)]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.12),transparent_36%),linear-gradient(225deg,rgba(112,143,128,0.1),transparent_44%)]" />
         </div>
         <div className="max-w-7xl mx-auto relative">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-8">
-            <div className="max-w-2xl">
-              <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-foreground">
-                Твой личный{' '}
-                <span className="text-primary">аниме-центр</span>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+            <motion.div
+              className="max-w-3xl"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground-secondary">
+                Seasonal watch hub
+              </div>
+              <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.02] text-foreground">
+                Аниме-трекер, который выглядит{' '}
+                <span className="text-primary">как личная медиатека</span>
               </h1>
-              <p className="text-foreground-secondary text-base sm:text-lg mt-4 leading-relaxed">
-                Отслеживай просмотр, собирай коллекцию и находи друзей.
+              <p className="text-foreground-secondary text-base sm:text-lg mt-5 leading-relaxed max-w-2xl">
+                Быстро находи тайтлы, веди коллекцию, отмечай прогресс и переключайся между сезонами без визуального шума.
               </p>
               <div className="flex items-center gap-3 mt-7">
-                <Button size="lg" className="gap-2 shadow-[0_18px_40px_rgba(168,85,247,0.3)]">
+                <Button size="lg" className="gap-2 shadow-[0_18px_40px_rgba(200,143,90,0.26)]" onClick={() => document.getElementById('anime-catalog')?.scrollIntoView({ behavior: 'smooth' })}>
                   <Star className="h-4 w-4" />
-                  Начать просмотр
+                  Открыть каталог
                 </Button>
                 <Button size="lg" variant="outline" className="gap-2 border-primary/30 hover:border-primary/50 hover:bg-primary/5" onClick={() => router.push('/collection')}>
                   <Eye className="h-4 w-4" />
                   Моя коллекция
                 </Button>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="glass rounded-2xl p-4 min-w-[110px]">
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-3 shrink-0"
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="glass rounded-2xl p-4 min-w-[120px]">
                 <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
-                  Топ рейтинг
+                  Рейтинг
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Star className="h-3.5 w-3.5 text-primary" />
                   <span className="text-2xl font-bold text-primary">#1</span>
                 </div>
               </div>
-              <div className="glass rounded-2xl p-4 min-w-[110px]">
+              <div className="glass rounded-2xl p-4 min-w-[120px]">
                 <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
                   Смотрю
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-cyan-400" />
-                  <span className="text-2xl font-bold text-cyan-400">12</span>
+                  <Eye className="h-3.5 w-3.5 text-accent-foreground" />
+                  <span className="text-2xl font-bold text-accent-foreground">12</span>
                 </div>
               </div>
-            </div>
+              <div className="glass rounded-2xl p-4 min-w-[120px] col-span-2 sm:col-span-1">
+                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
+                  Сезон
+                </div>
+                <div className="text-2xl font-bold text-foreground">2026</div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      <section className="px-4 sm:px-6 lg:px-8 mb-8">
+      <section className="px-4 sm:px-6 lg:px-8 mb-8" id="anime-catalog">
         <div className="max-w-7xl mx-auto">
-          <div className="glass rounded-2xl p-4 sm:p-5">
+          <motion.div
+            className="glass rounded-2xl p-4 sm:p-5"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.18 }}
+          >
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -422,7 +446,7 @@ const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 

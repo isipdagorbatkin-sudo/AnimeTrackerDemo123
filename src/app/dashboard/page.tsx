@@ -106,13 +106,13 @@ export default async function DashboardPage() {
       {/* Stats */}
       <section className="px-4 sm:px-6 lg:px-8 pb-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {stats.map((stat, i) => {
               const Icon = stat.icon
               return (
                 <div
                   key={stat.title}
-                  className="bg-card border border-border rounded-xl p-5"
+                  className="glass rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-foreground-secondary">{stat.title}</span>
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       {/* Recent Additions */}
       <section className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-card border border-border rounded-xl p-5 sm:p-6">
+          <div className="glass rounded-2xl p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="p-2 rounded-lg bg-primary/10">
                 <BookOpen className="h-4 w-4 text-primary" />
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
               {recentAnime && recentAnime.length > 0 ? (
                 <div className="space-y-3">
                   {recentAnime.map((item, i) => (
-                    <div key={item.id} className="bg-muted border border-border rounded-xl p-4">
+                    <div key={item.id} className="bg-muted/60 border border-border rounded-xl p-4 transition-colors hover:border-primary/25">
                       <AnimeDisplayServer animeId={item.anime_id} />
                       <div className="mt-3 flex items-center justify-between pt-2 border-t border-border">
                         <span className="status">

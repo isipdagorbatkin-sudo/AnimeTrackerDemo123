@@ -154,8 +154,8 @@ export default function SearchPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="relative">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-            <Loader2 className="h-7 w-7 animate-spin text-purple-400" />
+          <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+            <Loader2 className="h-7 w-7 animate-spin text-primary" />
           </div>
         </div>
       </div>
@@ -166,15 +166,15 @@ export default function SearchPage() {
     <div className="min-h-screen">
       <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-[450px] h-[450px] bg-purple-500/8 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-[350px] h-[350px] bg-blue-500/5 rounded-full blur-3xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.1),transparent_38%),linear-gradient(225deg,rgba(112,143,128,0.08),transparent_48%)]" />
         </div>
 
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center animate-fade-in-up">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center ring-1 ring-purple-500/20">
-                <Search className="h-5 w-5 text-purple-400" />
+              <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
+                <Search className="h-5 w-5 text-primary" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 Поиск{' '}
@@ -190,7 +190,7 @@ export default function SearchPage() {
 
       <section className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-card border border-border rounded-xl p-4 sm:p-5 mb-10">
+          <div className="glass rounded-2xl p-4 sm:p-5 mb-10">
             <div className="flex gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-muted-foreground/50" />
@@ -217,10 +217,9 @@ export default function SearchPage() {
           {loading && results.length === 0 ? (
             <div className="flex items-center justify-center py-32">
               <div className="relative">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-                  <Loader2 className="h-7 w-7 animate-spin text-purple-400" />
+                <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+                  <Loader2 className="h-7 w-7 animate-spin text-primary" />
                 </div>
-                <div className="absolute inset-0 rounded-2xl bg-purple-500/10 blur-xl animate-pulse" />
               </div>
             </div>
           ) : results.length > 0 ? (
@@ -243,7 +242,7 @@ export default function SearchPage() {
                     disabled={loading}
                     size="xl"
                     variant="outline"
-                    className="group px-10 border-purple-500/15 hover:border-purple-500/30 hover:bg-purple-500/5 gap-3"
+                    className="group px-10 border-primary/20 hover:border-primary/40 hover:bg-primary/5 gap-3"
                   >
                     {loading ? (
                       <>
@@ -264,7 +263,7 @@ export default function SearchPage() {
             </div>
           ) : query && query.length >= 2 ? (
             <div className="text-center py-32 animate-fade-in">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/10 to-blue-500/5 mb-6 ring-1 ring-purple-500/10">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6 ring-1 ring-primary/15">
                 <Search className="h-8 w-8 text-muted-foreground/40" />
               </div>
               <p className="text-foreground-secondary text-lg">
@@ -273,7 +272,7 @@ export default function SearchPage() {
             </div>
           ) : (
             <div className="text-center py-32 animate-fade-in">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/10 to-blue-500/5 mb-6 ring-1 ring-purple-500/10">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6 ring-1 ring-primary/15">
                 <Compass className="h-8 w-8 text-muted-foreground/40" />
               </div>
               <p className="text-foreground-secondary text-lg">

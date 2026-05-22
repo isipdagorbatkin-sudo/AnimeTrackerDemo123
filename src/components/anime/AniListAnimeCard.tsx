@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { translateGenre } from '@/lib/genres'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 interface AniListAnimeCardProps {
   anime: AniListAnime
@@ -48,8 +49,15 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
 
   return (
     <>
-      <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-[0_18px_60px_rgba(8,8,20,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_24px_80px_rgba(168,85,247,0.2)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.2),transparent_55%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <motion.div
+        className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/85 backdrop-blur-sm shadow-[0_18px_55px_rgba(5,5,10,0.38)] transition-colors duration-300 hover:border-primary/40 hover:shadow-[0_24px_70px_rgba(200,143,90,0.14)]"
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '80px' }}
+        whileHover={{ y: -5 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(200,143,90,0.12),transparent_50%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <Link href={`/anime/${anime.id}`}>
           <div className="relative card-image">
             {imageError || !imageUrl ? (
@@ -80,7 +88,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
 
             {anime.status && (
               <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5">
-                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/65 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90 ring-1 ring-white/10 backdrop-blur">
                   <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   {getStatusBadge(anime.status)}
                 </span>
@@ -89,7 +97,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
 
             {isInCollection && (
               <div className="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5">
-                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-emerald-500/90 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white shadow-lg shadow-emerald-500/30">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-success/90 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white shadow-lg shadow-black/20">
                   <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   В коллекции
                 </span>
@@ -99,7 +107,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             {score > 0 && (
               <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5">
                 <span className={cn(
-                  'inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1 sm:px-1.5 py-0.5 rounded-md text-[0.5rem] sm:text-[0.6rem] font-bold',
+                  'inline-flex items-center gap-0.5 sm:gap-1 bg-black/65 px-1 sm:px-1.5 py-0.5 rounded-md text-[0.5rem] sm:text-[0.6rem] font-bold ring-1 ring-white/10 backdrop-blur',
                   getScoreColor(score)
                 )}>
                   <Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-current" />
@@ -161,8 +169,8 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
               className={cn(
                 "flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 text-[0.55rem] sm:text-[0.65rem]",
                 isInCollection
-                  ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                  : "shadow-[0_10px_30px_rgba(168,85,247,0.25)]"
+                  ? "border-success/30 text-success hover:bg-success/10"
+                  : "shadow-[0_10px_30px_rgba(200,143,90,0.2)]"
               )}
               onClick={(e) => {
                 e.preventDefault()
@@ -190,7 +198,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       <AddToCollectionDialog
         isOpen={isAddDialogOpen}

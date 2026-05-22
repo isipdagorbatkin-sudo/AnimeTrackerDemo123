@@ -15,34 +15,6 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-function fallbackFallAnimation(element: HTMLElement, duration: number) {
-  const startTime = performance.now()
-  const startTop = parseFloat(element.style.top || '0')
-  const startLeft = parseFloat(element.style.left || '0')
-  const swayAmount = Math.random() * 100 - 50
-  const rotateEnd = Math.random() * 720
-
-  function animate(currentTime: number) {
-    const elapsed = (currentTime - startTime) / 1000
-    const progress = Math.min(elapsed / duration, 1)
-
-    const y = startTop + progress * (window.innerHeight + 40)
-    const sway = Math.sin(progress * Math.PI * 2) * swayAmount
-    const rot = progress * rotateEnd
-
-    element.style.transform = `translate(${sway}px, ${y}px) rotate(${rot}deg)`
-    element.style.opacity = String(Math.max(0.2, 1 - progress * 0.8))
-
-    if (progress < 1) {
-      requestAnimationFrame(animate)
-    } else {
-      element.remove()
-    }
-  }
-
-  requestAnimationFrame(animate)
-}
-
 export function SakuraAnimation() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const petalsRef = useRef<HTMLElement[]>([])
@@ -54,15 +26,15 @@ export function SakuraAnimation() {
       .sakura-petal {
         position: fixed;
         pointer-events: none;
-        z-index: 9999;
+        z-index: 20;
         border-radius: 50% 0 50% 50%;
-        box-shadow: 0 0 4px rgba(255, 182, 193, 0.15);
+        box-shadow: 0 0 4px rgba(255, 182, 193, 0.08);
         will-change: transform, opacity;
       }
 
       @keyframes sakura-fall {
-        0% { opacity: 0.9; top: -10%; }
-        100% { opacity: 0.2; top: 110%; }
+        0% { opacity: 0.42; top: -10%; }
+        100% { opacity: 0; top: 110%; }
       }
 
       @keyframes sakura-sway-0 {
@@ -108,13 +80,13 @@ export function SakuraAnimation() {
     function createPetal() {
       const petal = document.createElement('div')
       petal.className = 'sakura-petal'
-      const height = randomInt(10, 16)
+      const height = randomInt(7, 12)
       const width = height - randomInt(1, 3)
 
       const colors = [
-        'linear-gradient(120deg, rgba(255, 183, 197, 0.9), rgba(255, 197, 208, 0.9))',
-        'linear-gradient(120deg, rgba(255, 160, 180, 0.85), rgba(242, 185, 196, 0.85))',
-        'linear-gradient(120deg, rgba(212, 152, 163, 0.8), rgba(255, 182, 193, 0.85))',
+        'linear-gradient(120deg, rgba(230, 170, 181, 0.44), rgba(255, 205, 211, 0.36))',
+        'linear-gradient(120deg, rgba(210, 139, 153, 0.34), rgba(242, 185, 196, 0.32))',
+        'linear-gradient(120deg, rgba(198, 143, 154, 0.3), rgba(255, 182, 193, 0.34))',
       ]
 
       const startX = Math.random() * (document.documentElement.clientWidth - 100)
@@ -128,7 +100,7 @@ export function SakuraAnimation() {
         width: ${width}px;
         left: ${startX}px;
         top: -20px;
-        opacity: ${0.5 + Math.random() * 0.4};
+        opacity: ${0.18 + Math.random() * 0.22};
         animation:
           sakura-fall ${fallTime}s linear 0s 1,
           ${blowAnim} ${Math.max(fallTime - 20, 10)}s linear 0s infinite,
@@ -146,10 +118,10 @@ export function SakuraAnimation() {
     }
 
     intervalRef.current = setInterval(() => {
-      if (petalsRef.current.length < 25) {
+      if (petalsRef.current.length < 9) {
         createPetal()
       }
-    }, 200)
+    }, 850)
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
