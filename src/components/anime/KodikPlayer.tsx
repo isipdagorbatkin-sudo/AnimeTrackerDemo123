@@ -52,7 +52,7 @@ function getResultLabel(result: KodikResult): string {
   const title = result.title || result.title_orig || result.other_title || 'Kodik'
   const releaseYear = result.year || result.material_data?.year
   const episodeCount = getEpisodeCount(result)
-  return [title, releaseYear, episodeCount ? `${episodeCount} ep.` : null].filter(Boolean).join(' / ')
+  return [title, releaseYear, episodeCount ? `${episodeCount} эп.` : null].filter(Boolean).join(' / ')
 }
 
 function resultKey(result: KodikResult): string {
@@ -89,7 +89,7 @@ export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
       const found = list[0]
 
       if (!found) {
-        setError(`Anime was not found in Kodik: "${title}"`)
+        setError(`Не удалось надежно найти видео для "${title}". Лучше ничего не включать, чем открыть другой тайтл.`)
         return
       }
 
@@ -98,7 +98,7 @@ export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
       setEmbedUrl(getEmbedLink(found))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'unknown'
-      setError(`Kodik error: ${message}`)
+      setError(`Ошибка Kodik: ${message}`)
     } finally {
       setLoading(false)
     }
@@ -137,7 +137,7 @@ export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
             {loading ? (
               <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Searching Kodik...</p>
+                <p className="text-sm text-muted-foreground">Ищем подходящее видео...</p>
               </div>
             ) : (
               <div className="text-center p-4">
@@ -157,7 +157,7 @@ export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
             className="flex max-w-full items-center gap-2 rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-left text-sm hover:border-primary/40"
           >
             <span className="truncate">
-              {selected?.translation?.title || 'Kodik'}: {selected ? getResultLabel(selected) : 'select source'}
+              {selected?.translation?.title || 'Kodik'}: {selected ? getResultLabel(selected) : 'выберите источник'}
             </span>
             <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', showMenu && 'rotate-180')} />
           </button>

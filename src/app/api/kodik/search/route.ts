@@ -17,6 +17,7 @@ type KodikApiResult = {
   last_episode?: number
   shikimori_id?: string
   myanimelist_id?: number
+  type?: string
   translation?: { id?: number; title?: string; type?: string }
   seasons?: Record<string, unknown>
   material_data?: {
@@ -52,11 +53,19 @@ function scoreResult(item: KodikApiResult, queries: string[], expectedYear: numb
   const normalizedTitles = getResultTitles(item).map(normalizeTitle).filter(Boolean)
   let score = 0
 
+  const type = String(item.type || '').toLowerCase()
+  if (type.includes('anime')) score += 25
+  else if (type) score -= 80
+
   for (const query of normalizedQueries) {
     for (const title of normalizedTitles) {
       if (!query || !title) continue
       if (title === query) score += 90
-      else if (title.includes(query) || query.includes(title)) score += 45
+      else if (title.includes(query) || query.includes(title)) {
+        const shorter = Math.min(title.length, query.length)
+        const longer = Math.max(title.length, query.length)
+        score += shorter / longer > 0.55 ? 45 : 10
+      }
     }
   }
 
@@ -83,15 +92,27 @@ function scoreResult(item: KodikApiResult, queries: string[], expectedYear: numb
   }
 
   const malCandidate = Number(item.myanimelist_id || item.material_data?.myanimelist_id || 0)
-  const shikimoriCandidate = Number(item.shikimori_id || 0)
+  const kodikAnimeId = Number(item.shikimori_id || 0)
   if (idMal && malCandidate) {
     score += malCandidate === idMal ? 120 : -80
   }
-  if (idMal && shikimoriCandidate) {
-    score += shikimoriCandidate === idMal ? 180 : -120
+  if (idMal && kodikAnimeId) {
+    score += kodikAnimeId === idMal ? 180 : -120
   }
 
   return score
+}
+
+function isAcceptableResult(item: KodikApiResult & { match_score?: number }, idMal: number | null): boolean {
+  const score = Number(item.match_score || 0)
+  const malCandidate = Number(item.myanimelist_id || item.material_data?.myanimelist_id || 0)
+  const kodikAnimeId = Number(item.shikimori_id || 0)
+  const type = String(item.type || '').toLowerCase()
+
+  if (type && !type.includes('anime')) return false
+  if (idMal && malCandidate && malCandidate !== idMal) return false
+  if (idMal && kodikAnimeId && kodikAnimeId !== idMal) return false
+  return score >= (idMal ? 80 : 70)
 }
 
 function dedupeResults(results: KodikApiResult[]): KodikApiResult[] {
@@ -133,6 +154,7 @@ export async function GET(request: NextRequest) {
 
     const results = dedupeResults(batches.flat())
       .map((item) => ({ ...item, match_score: scoreResult(item, queries, expectedYear, expectedEpisodes, idMal) }))
+      .filter((item) => isAcceptableResult(item, idMal))
       .sort((a, b) => b.match_score - a.match_score)
 
     return NextResponse.json({ success: true, results })

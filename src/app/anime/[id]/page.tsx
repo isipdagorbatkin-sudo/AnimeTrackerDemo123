@@ -157,6 +157,24 @@ export default function AnimePage() {
   }
 
   const imageUrl = getProxiedImageUrl(getCoverImage(anime))
+  const seasonRelations = relations.filter((rel) =>
+    ['PREQUEL', 'SEQUEL', 'PARENT', 'SIDE_STORY', 'ALTERNATIVE', 'SUMMARY'].includes(rel.relationType)
+  )
+  const relationLabel = (type: string): string => {
+    const map: Record<string, string> = {
+      PREQUEL: 'Предыдущий сезон',
+      SEQUEL: 'Следующий сезон',
+      PARENT: 'Основной тайтл',
+      SIDE_STORY: 'Ответвление',
+      ALTERNATIVE: 'Альтернативная версия',
+      SUMMARY: 'Краткий пересказ',
+      ADAPTATION: 'Адаптация',
+      CHARACTER: 'Персонажи',
+      OTHER: 'Связанное',
+      SPIN_OFF: 'Спин-офф',
+    }
+    return map[type] || type
+  }
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
@@ -354,6 +372,41 @@ export default function AnimePage() {
           </div>
 
           <div className="lg:col-span-3 mt-8 w-full overflow-hidden">
+            {seasonRelations.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Сезоны и части
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-primary/35 bg-primary/10 p-4">
+                    <div className="text-xs uppercase tracking-widest text-primary mb-1">Сейчас открыто</div>
+                    <div className="font-semibold line-clamp-2">{title}</div>
+                    {anime.episodes && <div className="mt-1 text-xs text-muted-foreground">{anime.episodes} эп.</div>}
+                  </div>
+                  {seasonRelations.map((rel) => {
+                    const relAnime = rel.node
+                    const relTitle = relAnime.title?.romaji || relAnime.title?.english || relAnime.title?.native || 'Без названия'
+                    return (
+                      <Link
+                        key={`${rel.relationType}-${relAnime.id}`}
+                        href={`/anime/${relAnime.id}`}
+                        className="rounded-2xl border border-border bg-card/70 p-4 transition-all hover:border-primary/35 hover:bg-muted/40"
+                      >
+                        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+                          {relationLabel(rel.relationType)}
+                        </div>
+                        <div className="font-semibold line-clamp-2">{relTitle}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {[relAnime.startDate?.year, relAnime.episodes ? `${relAnime.episodes} эп.` : null].filter(Boolean).join(' · ') || 'подробнее'}
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-primary" />
               Смотреть
@@ -384,7 +437,7 @@ export default function AnimePage() {
                 }, {})
                 return Object.entries(grouped).map(([groupName, groupItems]) => (
                   <div key={groupName} className="mb-6">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{groupName}</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{relationLabel(groupName)}</h4>
                     <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                       {groupItems.map((rel) => {
                         const a = rel.node

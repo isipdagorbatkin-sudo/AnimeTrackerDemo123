@@ -27,6 +27,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { searchWithRussian } from '@/lib/search'
 import { motion } from 'framer-motion'
+import { useRussianText } from '@/lib/russian-cache'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 type GuessMode = 'description' | 'character'
@@ -93,6 +94,7 @@ export default function HomePage() {
   const [guessSearching, setGuessSearching] = useState(false)
   const [guessStreak, setGuessStreak] = useState(0)
   const guessSearchTimeoutRef = useRef<NodeJS.Timeout>()
+  const guessRussianText = useRussianText(guessAnime)
 
   const refreshCollection = useCallback(async () => {
     const supabase = createClient()
@@ -164,6 +166,10 @@ export default function HomePage() {
       }
 
       if (!anime && mode === 'description') {
+        anime = fallbackAnime
+      }
+
+      if (!anime && mode === 'character') {
         anime = fallbackAnime
       }
 
@@ -377,6 +383,7 @@ export default function HomePage() {
       anime.title.romaji,
       anime.title.english || '',
       anime.title.native || '',
+      guessRussianText.title || '',
     ].map(normalizeTitle).filter(Boolean)
     return titles.some(title => title === guess || title.includes(guess) && guess.length > 5)
   }
@@ -434,7 +441,7 @@ export default function HomePage() {
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground-secondary">
-                Seasonal watch hub
+                Сезонная медиатека
               </div>
               <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.02] text-foreground">
                 Аниме-трекер, который выглядит{' '}
@@ -589,7 +596,7 @@ export default function HomePage() {
                           <div className="text-lg font-bold text-primary">{guessScore}</div>
                         </div>
                         <div className="rounded-xl border border-border bg-muted/40 px-3 py-2">
-                          <div className="text-[0.6rem] uppercase tracking-widest text-muted-foreground">Серия</div>
+                          <div className="text-[0.6rem] uppercase tracking-widest text-muted-foreground">Стрик</div>
                           <div className="text-lg font-bold text-foreground">{guessStreak}</div>
                         </div>
                       </div>
@@ -635,10 +642,10 @@ export default function HomePage() {
                                 </span>
                               ))}
                             </div>
-                            {stripHtml(guessAnime.description) ? (
+                            {stripHtml(guessRussianText.description || guessAnime.description) ? (
                               <p className="text-base leading-relaxed text-foreground/90">
-                                {stripHtml(guessAnime.description).slice(0, 520)}
-                                {stripHtml(guessAnime.description).length > 520 ? '...' : ''}
+                                {stripHtml(guessRussianText.description || guessAnime.description).slice(0, 520)}
+                                {stripHtml(guessRussianText.description || guessAnime.description).length > 520 ? '...' : ''}
                               </p>
                             ) : (
                               <div className="rounded-2xl border border-border bg-muted/35 p-4 text-sm leading-relaxed text-foreground-secondary">
@@ -655,19 +662,23 @@ export default function HomePage() {
                           </div>
                         )}
 
-                        {guessMode === 'character' && guessCharacters.length > 0 && (
+                        {guessMode === 'character' && (
                           <div className="flex flex-col items-center text-center">
                             <img
-                              src={getProxiedImageUrl(guessCharacters[0]?.image?.large || '')}
-                              alt="Главный герой"
+                              src={getProxiedImageUrl(guessCharacters[0]?.image?.large || guessAnime?.coverImage?.extraLarge || guessAnime?.coverImage?.large || '')}
+                              alt={guessCharacters[0]?.name?.full || 'Подсказка по аниме'}
                               className="h-56 w-56 rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-border"
                             />
-                            <div className="mt-4 text-sm text-muted-foreground">
-                              Персонаж: <span className="font-semibold text-foreground">{guessCharacters[0]?.name?.full}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Из какого это аниме?
-                            </p>
+                            {guessCharacters[0] ? (
+                              <div className="mt-4 text-sm text-muted-foreground">
+                                Персонаж: <span className="font-semibold text-foreground">{guessCharacters[0].name?.full}</span>
+                              </div>
+                            ) : (
+                              <div className="mt-4 text-sm text-muted-foreground">
+                                Персонаж не найден, но постер остался как подсказка.
+                              </div>
+                            )}
+                            <p className="mt-1 text-xs text-muted-foreground">Из какого это аниме?</p>
                           </div>
                         )}
                       </div>
