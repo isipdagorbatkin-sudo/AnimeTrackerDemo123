@@ -419,7 +419,7 @@ export default function HomePage() {
 
   const handleSkip = () => {
     if (!guessAnime) return
-    const title = guessAnime.title.romaji || guessAnime.title.english || guessAnime.title.native
+    const title = guessRussianText.title || guessAnime.title.romaji || guessAnime.title.english || guessAnime.title.native
     setGuessStreak(0)
     setGuessMessage(`Это было: ${title}`)
     setGuessStep('result')
