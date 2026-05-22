@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send } from 'lucide-react'
+import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, UserRound, RotateCcw, CheckCircle2, XCircle } from 'lucide-react'
 import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
 import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
@@ -29,6 +29,7 @@ import { searchWithRussian } from '@/lib/search'
 import { motion } from 'framer-motion'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
+type GuessMode = 'description' | 'character'
 
 function dedupeAnime(list: AniListAnime[]): AniListAnime[] {
   const seen = new Set<number>()
@@ -37,6 +38,22 @@ function dedupeAnime(list: AniListAnime[]): AniListAnime[] {
     seen.add(a.id)
     return true
   })
+}
+
+function normalizeTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9]+/gi, ' ')
+    .trim()
+}
+
+function stripHtml(value: string | null): string {
+  return (value || '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?[^>]+(>|$)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 const tabConfig = [
@@ -66,11 +83,16 @@ export default function HomePage() {
 
   const [guessAnime, setGuessAnime] = useState<AniListAnime | null>(null)
   const [guessCharacters, setGuessCharacters] = useState<AniListCharacter[]>([])
+  const [guessMode, setGuessMode] = useState<GuessMode>('description')
   const [guessStep, setGuessStep] = useState<'loading' | 'ready' | 'result'>('loading')
   const [guessInput, setGuessInput] = useState('')
   const [guessMessage, setGuessMessage] = useState('')
   const [usedHints, setUsedHints] = useState(0)
   const [guessScore, setGuessScore] = useState(0)
+  const [guessSearchResults, setGuessSearchResults] = useState<AniListAnime[]>([])
+  const [guessSearching, setGuessSearching] = useState(false)
+  const [guessStreak, setGuessStreak] = useState(0)
+  const guessSearchTimeoutRef = useRef<NodeJS.Timeout>()
 
   const refreshCollection = useCallback(async () => {
     const supabase = createClient()
@@ -108,38 +130,64 @@ export default function HomePage() {
     }
   }, [activeTab])
 
-  const startGuessGame = useCallback(async () => {
+  const startGuessGame = useCallback(async (mode: GuessMode = guessMode) => {
     setGuessStep('loading')
     setGuessInput('')
     setGuessMessage('')
+    setGuessSearchResults([])
     setUsedHints(0)
     try {
-      const anime = await getRandomAnime()
+      let anime: AniListAnime | null = null
+      let fallbackAnime: AniListAnime | null = null
+      let characters: AniListCharacter[] = []
+      let attempts = 0
+
+      while (attempts < 8) {
+        attempts += 1
+        const candidate = await getRandomAnime()
+        if (!candidate) continue
+        fallbackAnime ||= candidate
+
+        if (mode === 'description') {
+          if (stripHtml(candidate.description).length > 40) {
+            anime = candidate
+            break
+          }
+        } else {
+          const loadedCharacters = await getAnimeCharacters(candidate.id)
+          if (loadedCharacters.length > 0) {
+            anime = candidate
+            characters = loadedCharacters
+            break
+          }
+        }
+      }
+
+      if (!anime && mode === 'description') {
+        anime = fallbackAnime
+      }
+
       if (!anime) {
-        setGuessMessage('Не удалось загрузить аниме. Попробуйте снова.')
+        setGuessMessage('Не удалось подобрать раунд. Попробуйте снова.')
         setGuessStep('ready')
         return
       }
       setGuessAnime(anime)
-      const characters = await getAnimeCharacters(anime.id)
-      setGuessCharacters(characters || [])
-      setGuessStep(characters && characters.length > 0 ? 'ready' : 'loading')
-      if (!characters || characters.length === 0) {
-        startGuessGame()
-      }
+      setGuessCharacters(characters)
+      setGuessStep('ready')
     } catch {
       setGuessMessage('Ошибка загрузки. Попробуйте снова.')
       setGuessStep('ready')
     }
-  }, [])
+  }, [guessMode])
 
   useEffect(() => {
     if (activeTab === 'guess') {
-      startGuessGame()
+      startGuessGame(guessMode)
     } else {
       loadAnime(1, false)
     }
-  }, [activeTab])
+  }, [activeTab, guessMode])
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -184,6 +232,31 @@ export default function HomePage() {
     genreLoaderRef.current = loadAnimeByGenre
     loadAnimeByGenre()
   }, [selectedGenre, activeTab])
+
+  useEffect(() => {
+    clearTimeout(guessSearchTimeoutRef.current)
+    const query = guessInput.trim()
+
+    if (activeTab !== 'guess' || guessStep !== 'ready' || query.length < 2) {
+      setGuessSearchResults([])
+      setGuessSearching(false)
+      return
+    }
+
+    guessSearchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setGuessSearching(true)
+        const result = await searchWithRussian(query, 1, 5)
+        setGuessSearchResults(result.media || [])
+      } catch {
+        setGuessSearchResults([])
+      } finally {
+        setGuessSearching(false)
+      }
+    }, 260)
+
+    return () => clearTimeout(guessSearchTimeoutRef.current)
+  }, [activeTab, guessInput, guessStep])
 
   useEffect(() => {
     clearTimeout(searchTimeoutRef.current)
@@ -297,18 +370,32 @@ export default function HomePage() {
     return () => observer.disconnect()
   }, [hasMore, loading, loadMore, activeTab])
 
-  const handleGuess = () => {
+  const isCorrectGuess = (value: string, anime: AniListAnime): boolean => {
+    const guess = normalizeTitle(value)
+    if (!guess) return false
+    const titles = [
+      anime.title.romaji,
+      anime.title.english || '',
+      anime.title.native || '',
+    ].map(normalizeTitle).filter(Boolean)
+    return titles.some(title => title === guess || title.includes(guess) && guess.length > 5)
+  }
+
+  const handleGuess = (selectedAnime?: AniListAnime) => {
     if (!guessAnime) return
-    const guess = guessInput.trim().toLowerCase()
-    const correctEnglish = (guessAnime.title.english || '').toLowerCase()
-const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
-    if (guess === correctRomaji || guess === correctEnglish) {
+    const guessedValue = selectedAnime
+      ? selectedAnime.title.romaji || selectedAnime.title.english || selectedAnime.title.native || ''
+      : guessInput
+
+    if ((selectedAnime && selectedAnime.id === guessAnime.id) || isCorrectGuess(guessedValue, guessAnime)) {
       const points = Math.max(10 - usedHints * 2, 1)
       setGuessScore(s => s + points)
-      setGuessMessage(`✅ Правильно! +${points} очков`)
+      setGuessStreak(s => s + 1)
+      setGuessMessage(`Правильно. +${points} очков`)
       setGuessStep('result')
     } else {
-      setGuessMessage('❌ Не угадали! Попробуйте ещё раз.')
+      setGuessStreak(0)
+      setGuessMessage('Не оно. Попробуйте другой тайтл.')
     }
   }
 
@@ -326,7 +413,8 @@ const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
   const handleSkip = () => {
     if (!guessAnime) return
     const title = guessAnime.title.romaji || guessAnime.title.english || guessAnime.title.native
-    setGuessMessage(`😢 Это было: ${title}`)
+    setGuessStreak(0)
+    setGuessMessage(`Это было: ${title}`)
     setGuessStep('result')
   }
 
@@ -478,76 +566,189 @@ const correctRomaji = (guessAnime.title.romaji || '').toLowerCase()
             </TabsList>
 
             {activeTab === 'guess' ? (
-              <div className="max-w-xl mx-auto">
+              <div className="max-w-4xl mx-auto">
                 {guessStep === 'loading' ? (
                   <div className="flex items-center justify-center py-32">
                     <Loader2 className="h-7 w-7 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className="glass rounded-2xl p-6 sm:p-8 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-6">
-                      <GamepadIcon className="h-6 w-6 text-primary" />
-                      <h2 className="text-xl font-bold">Угадай аниме по персонажу</h2>
-                    </div>
-
-                    <div className="mb-2 text-sm text-muted-foreground">
-                      Очки: <span className="text-primary font-bold">{guessScore}</span>
-                    </div>
-
-                    {guessCharacters.length > 0 && (
-                      <div className="mb-6">
-                        <div className="relative inline-block">
-                          <img
-                            src={getProxiedImageUrl(guessCharacters[0]?.image?.large || '')}
-                            alt="Персонаж"
-                            className="w-48 h-48 rounded-2xl object-cover mx-auto shadow-lg"
-                          />
+                  <div className="glass rounded-2xl p-5 sm:p-7">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <GamepadIcon className="h-5 w-5 text-primary" />
+                          <h2 className="text-xl font-bold">Аниме-квиз</h2>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Кто это?
+                        <p className="text-sm text-foreground-secondary">
+                          Вводи название сам: поиск подскажет варианты, но угадывать придется головой.
                         </p>
                       </div>
-                    )}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-xl border border-border bg-muted/40 px-3 py-2">
+                          <div className="text-[0.6rem] uppercase tracking-widest text-muted-foreground">Очки</div>
+                          <div className="text-lg font-bold text-primary">{guessScore}</div>
+                        </div>
+                        <div className="rounded-xl border border-border bg-muted/40 px-3 py-2">
+                          <div className="text-[0.6rem] uppercase tracking-widest text-muted-foreground">Серия</div>
+                          <div className="text-lg font-bold text-foreground">{guessStreak}</div>
+                        </div>
+                      </div>
+                    </div>
 
-                    {guessStep === 'ready' && (
+                    <div className="grid gap-2 sm:grid-cols-2 mb-6">
+                      {[
+                        { value: 'description' as GuessMode, label: 'По описанию', icon: FileText, text: 'Узнай тайтл по синопсису и жанрам.' },
+                        { value: 'character' as GuessMode, label: 'По герою', icon: UserRound, text: 'Узнай аниме по фото главного персонажа.' },
+                      ].map((mode) => {
+                        const Icon = mode.icon
+                        const active = guessMode === mode.value
+                        return (
+                          <button
+                            key={mode.value}
+                            type="button"
+                            onClick={() => setGuessMode(mode.value)}
+                            className={cn(
+                              'text-left rounded-2xl border p-4 transition-all',
+                              active
+                                ? 'border-primary/50 bg-primary/10 shadow-[0_18px_45px_rgba(200,143,90,0.12)]'
+                                : 'border-border bg-muted/30 hover:border-primary/25 hover:bg-muted/50'
+                            )}
+                          >
+                            <div className="flex items-center gap-2 font-semibold">
+                              <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                              {mode.label}
+                            </div>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{mode.text}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+                      <div className="rounded-2xl border border-border bg-background/35 p-4 sm:p-5 min-h-[260px]">
+                        {guessMode === 'description' && guessAnime && (
+                          <div className="space-y-4">
+                            <div className="flex flex-wrap gap-1.5">
+                              {guessAnime.genres?.slice(0, 5).map((genre) => (
+                                <span key={genre} className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                                  {translateGenre(genre)}
+                                </span>
+                              ))}
+                            </div>
+                            {stripHtml(guessAnime.description) ? (
+                              <p className="text-base leading-relaxed text-foreground/90">
+                                {stripHtml(guessAnime.description).slice(0, 520)}
+                                {stripHtml(guessAnime.description).length > 520 ? '...' : ''}
+                              </p>
+                            ) : (
+                              <div className="rounded-2xl border border-border bg-muted/35 p-4 text-sm leading-relaxed text-foreground-secondary">
+                                Описание спряталось, но следы остались: тайтл выходил в {guessAnime.startDate?.year || 'неизвестном году'},
+                                формат {guessAnime.format || 'неизвестен'}, жанры: {guessAnime.genres?.slice(0, 4).map(translateGenre).join(', ') || 'без жанров'}.
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
+                              <span className="rounded-xl bg-muted/50 px-3 py-2">Год: {guessAnime.startDate?.year || '???'}</span>
+                              <span className="rounded-xl bg-muted/50 px-3 py-2">Формат: {guessAnime.format || '???'}</span>
+                              <span className="rounded-xl bg-muted/50 px-3 py-2">Эпизоды: {guessAnime.episodes || '???'}</span>
+                              <span className="rounded-xl bg-muted/50 px-3 py-2">Оценка: {Math.round((guessAnime.meanScore || guessAnime.averageScore || 0) / 10) || '???'}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {guessMode === 'character' && guessCharacters.length > 0 && (
+                          <div className="flex flex-col items-center text-center">
+                            <img
+                              src={getProxiedImageUrl(guessCharacters[0]?.image?.large || '')}
+                              alt="Главный герой"
+                              className="h-56 w-56 rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-border"
+                            />
+                            <div className="mt-4 text-sm text-muted-foreground">
+                              Персонаж: <span className="font-semibold text-foreground">{guessCharacters[0]?.name?.full}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Из какого это аниме?
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="space-y-3">
-                        <div className="flex gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
                             type="text"
-                            placeholder="Название аниме..."
+                            placeholder="Начните вводить название..."
                             value={guessInput}
                             onChange={(e) => setGuessInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleGuess()}
-                            className="flex-1 bg-background/60 border-border/70"
+                            className="h-10 pl-10 bg-background/60 border-border/70"
                           />
-                          <Button onClick={handleGuess} disabled={!guessInput.trim()}>
-                            <Send className="h-4 w-4" />
-                          </Button>
+                          {guessSearching && (
+                            <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-primary" />
+                          )}
                         </div>
-                        <div className="flex gap-2 justify-center">
-                          <Button variant="outline" size="sm" onClick={handleHint} className="gap-1">
-                            <HelpCircle className="h-3 w-3" />
-                            Подсказка
+
+                        {guessSearchResults.length > 0 && guessStep === 'ready' && (
+                          <div className="overflow-hidden rounded-2xl border border-border bg-background/55">
+                            {guessSearchResults.map((result) => (
+                              <button
+                                key={result.id}
+                                type="button"
+                                onClick={() => handleGuess(result)}
+                                className="flex w-full items-center gap-3 border-b border-border/60 p-2.5 text-left transition-colors last:border-b-0 hover:bg-muted/50"
+                              >
+                                <img
+                                  src={getProxiedImageUrl(result.coverImage?.medium || result.coverImage?.large || '')}
+                                  alt={result.title.romaji}
+                                  className="h-12 w-9 rounded-md object-cover"
+                                />
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-semibold">{result.title.romaji || result.title.english}</span>
+                                  <span className="block text-xs text-muted-foreground">{result.startDate?.year || 'год неизвестен'}</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {guessStep === 'ready' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button onClick={() => handleGuess()} disabled={!guessInput.trim()} className="gap-2">
+                              <Send className="h-4 w-4" />
+                              Проверить
+                            </Button>
+                            <Button variant="outline" onClick={handleHint} className="gap-2">
+                              <HelpCircle className="h-4 w-4" />
+                              Подсказка
+                            </Button>
+                            <Button variant="outline" onClick={handleSkip} className="gap-2">
+                              <XCircle className="h-4 w-4" />
+                              Сдаюсь
+                            </Button>
+                            <Button variant="outline" onClick={() => startGuessGame(guessMode)} className="gap-2">
+                              <RotateCcw className="h-4 w-4" />
+                              Новый
+                            </Button>
+                          </div>
+                        )}
+
+                        {guessStep === 'result' && (
+                          <Button onClick={() => startGuessGame(guessMode)} className="w-full gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Следующий раунд
                           </Button>
-                          <Button variant="outline" size="sm" onClick={handleSkip} className="gap-1">
-                            Сдаюсь
-                          </Button>
-                        </div>
+                        )}
+
                         {guessMessage && (
-                          <p className="text-sm mt-3">{guessMessage}</p>
+                          <div className={cn(
+                            'rounded-2xl border px-4 py-3 text-sm',
+                            guessStep === 'result' ? 'border-primary/30 bg-primary/10 text-foreground' : 'border-border bg-muted/40 text-muted-foreground'
+                          )}>
+                            {guessMessage}
+                          </div>
                         )}
                       </div>
-                    )}
-
-                    {guessStep === 'result' && (
-                      <div className="space-y-4">
-                        {guessMessage && <p className="text-sm">{guessMessage}</p>}
-                        <Button onClick={startGuessGame} className="gap-2">
-                          <GamepadIcon className="h-4 w-4" />
-                          Следующее
-                        </Button>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>

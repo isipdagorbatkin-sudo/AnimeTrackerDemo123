@@ -453,16 +453,7 @@ export async function getRandomAnime(): Promise<AniListAnime | null> {
       query ($page: Int) {
         Page(page: $page, perPage: 20) {
           media(type: ANIME, sort: POPULARITY_DESC) {
-            id
-            title {
-              romaji
-              english
-              native
-            }
-            coverImage {
-              large
-            }
-            genres
+            ${ANIME_FRAGMENT}
           }
           pageInfo {
             total

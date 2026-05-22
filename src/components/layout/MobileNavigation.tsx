@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Library, Search, MessageSquare, Sparkles } from 'lucide-react'
+import { Home, Library, Search, BarChart3, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Главная', icon: Home },
   { href: '/dashboard', label: 'Хаб', icon: Sparkles },
   { href: '/collection', label: 'Коллекция', icon: Library },
+  { href: '/statistics', label: 'Статы', icon: BarChart3 },
   { href: '/search', label: 'Поиск', icon: Search },
-  { href: '/chat', label: 'Чаты', icon: MessageSquare },
 ]
 
 export function MobileNavigation() {

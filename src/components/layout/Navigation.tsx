@@ -11,6 +11,7 @@ import {
   Search,
   MessageSquare,
   Sparkles,
+  BarChart3,
   ChevronLeft,
   Flame,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const navItems = [
   { href: '/', label: 'Главная', icon: Home },
   { href: '/dashboard', label: 'Дашборд', icon: Sparkles },
   { href: '/collection', label: 'Коллекция', icon: BookOpen },
+  { href: '/statistics', label: 'Статистика', icon: BarChart3 },
   { href: '/search', label: 'Поиск', icon: Search },
   { href: '/chat', label: 'Сообщения', icon: MessageSquare },
 ]
