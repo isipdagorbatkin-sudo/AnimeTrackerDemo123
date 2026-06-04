@@ -9,8 +9,10 @@ import { Button } from '@/components/ui/button'
 import { Star, Calendar, PlayCircle, Plus, Share2, Image as ImageIcon, Users, Clock, Loader2, Check } from 'lucide-react'
 import { AddToCollectionDialog } from '@/components/anime/AddToCollectionDialog'
 import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
+import { KodikPlayer } from '@/components/anime/KodikPlayer'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { createClient } from '@/lib/supabase/client'
+import { cleanAnimeDescription } from '@/lib/anime-text'
 import Link from 'next/link'
 
 export default function AnimePage() {
@@ -84,7 +86,7 @@ export default function AnimePage() {
 
   const title = anime?.russian || anime?.name || 'Без названия'
   const year = anime?.aired_on ? new Date(anime.aired_on).getFullYear() : null
-  const description = anime?.synopsis || anime?.description_html?.replace(/<[^>]+>/g, '')
+  const description = cleanAnimeDescription(anime?.synopsis || anime?.description_html)
 
   if (!mounted) {
     return (
@@ -289,6 +291,8 @@ export default function AnimePage() {
                 </div>
               </div>
             )}
+
+            <KodikPlayer anime={anime} />
 
             {/* Screenshots */}
             {screenshots.length > 0 && (
