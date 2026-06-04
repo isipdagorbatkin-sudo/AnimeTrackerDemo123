@@ -18,6 +18,9 @@ import { useRouter } from 'next/navigation'
 import { getAnimeById, getCoverImage, AniListAnime } from '@/lib/anilist/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian-cache'
+import { normalizeAnimeTitleKey } from '@/lib/anime-text'
+import { translateGenre } from '@/lib/genres'
+import Link from 'next/link'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -36,6 +39,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [newPlaylistName, setNewPlaylistName] = useState('')
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
   const [creatingPlaylist, setCreatingPlaylist] = useState(false)
+  const [collectionTitleKeys, setCollectionTitleKeys] = useState<Record<number, string>>({})
   const supabase = createClient()
   const favTitle = useRussianTitle(favoriteAnime)
 
@@ -47,6 +51,39 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     if (!mounted) return
     loadProfile()
   }, [params.id, mounted])
+
+  useEffect(() => {
+    const missingIds = Array.from(new Set(collection.map(item => item.anime_id)))
+      .filter(id => !collectionTitleKeys[id])
+    if (missingIds.length === 0) return
+
+    let cancelled = false
+    Promise.all(missingIds.map(async (id) => {
+      const anime = await getAnimeById(id)
+      if (!anime) return [id, String(id)] as const
+
+      if (anime.idMal) {
+        await fetchRussianText(anime.idMal, anime.title?.english, anime.title?.romaji, anime.title?.native)
+      }
+
+      const russian = anime.idMal ? getRussianText(anime.idMal) : null
+      const title = russian?.title || anime.title?.romaji || anime.title?.english || anime.title?.native || String(id)
+      return [id, normalizeAnimeTitleKey(title) || String(id)] as const
+    })).then((entries) => {
+      if (cancelled) return
+      setCollectionTitleKeys(prev => {
+        const next = { ...prev }
+        entries.forEach(([id, key]) => {
+          next[id] = key
+        })
+        return next
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [collection, collectionTitleKeys])
 
   const loadProfile = async () => {
     try {
@@ -241,6 +278,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const completedItems = safeCollection.filter(i => i.status === 'completed')
   const droppedItems = safeCollection.filter(i => i.status === 'dropped')
   const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
+  const uniqueCollectionCount = new Set(safeCollection.map(i => collectionTitleKeys[i.anime_id] || String(i.anime_id))).size
 
   return (
     <div className="min-h-screen relative">
@@ -249,29 +287,30 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <img
             src={getProxiedImageUrl(profile.background_url)}
             alt=""
-            className="w-full h-full object-cover opacity-20"
+            className="w-full h-full object-cover opacity-25"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/88 to-background" />
+          <div className="absolute inset-0 bg-black/35" />
         </div>
       )}
 
       <section className="relative overflow-hidden py-16 px-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.24),transparent_42%),linear-gradient(225deg,rgba(112,143,128,0.14),transparent_45%)] animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
           <Button variant="ghost" onClick={() => router.back()} className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" /> Назад
           </Button>
 
-          <Card className="glass">
+          <Card className="glass overflow-hidden">
             {profile.banner_url && (
-              <div className="relative h-48 sm:h-64 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
+              <div className="relative h-52 sm:h-72 overflow-hidden -mx-6 -mt-6 mb-0">
                 <img
                   src={getProxiedImageUrl(profile.banner_url)}
                   alt=""
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
               </div>
             )}
             <CardHeader className="pt-8">
@@ -283,6 +322,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   </Avatar>
                   <div className="min-w-0 space-y-2">
                     <CardTitle className="text-2xl sm:text-3xl break-words">{profile.username}</CardTitle>
+                    <div className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      {favoriteAnime ? `Любит: ${favTitle}` : 'Профиль зрителя'}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4 shrink-0" />
                       Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
@@ -309,8 +351,21 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Тайтлов', value: uniqueCollectionCount },
+                  { label: 'Смотрит', value: watchingItems.length },
+                  { label: 'Плейлистов', value: safePlaylists.length },
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-xl border border-border/70 bg-background/35 p-3">
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="mt-1 text-2xl font-bold text-primary">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
               {profile.bio && (
-                <div className="mt-6 flex items-start gap-2 text-base text-muted-foreground">
+                <div className="mt-6 flex items-start gap-2 rounded-xl border border-border/60 bg-background/30 p-4 text-base text-muted-foreground">
                   <Quote className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                   <p className="italic">{profile.bio}</p>
                 </div>
@@ -346,7 +401,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-8">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
-                Коллекция ({safeCollection.length})
+                Коллекция ({uniqueCollectionCount})
               </TabsTrigger>
               <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Смотрю ({watchingItems.length})
@@ -551,7 +606,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2">
                     {[
-                      { label: 'Всего аниме', value: safeCollection.length },
+                      { label: 'Всего тайтлов', value: uniqueCollectionCount },
                       { label: 'Смотрю сейчас', value: watchingItems.length },
                       { label: 'Просмотрено', value: completedItems.length },
                       { label: 'В планах', value: planItems.length },
@@ -599,7 +654,7 @@ function CollectionList({
       if (!animeCache[id]) {
         getAnimeById(id).then(data => {
           setAnimeCache(prev => ({ ...prev, [id]: data }))
-          if (data?.idMal) fetchRussianText(data.idMal, data.title?.english, data.title?.romaji)
+          if (data?.idMal) fetchRussianText(data.idMal, data.title?.english, data.title?.romaji, data.title?.native)
         })
       }
     })
@@ -617,7 +672,8 @@ function CollectionList({
     <div className="grid gap-4">
       {items.map((item) => {
         const anime = animeCache[item.anime_id]
-const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
+        const ru = anime?.idMal ? getRussianText(anime.idMal)?.title : ''
+        const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
         const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
 
         return (
@@ -629,10 +685,23 @@ const title = anime?.title?.romaji || anime?.title?.english || anime?.title?.nat
                     <img src={imageUrl} alt={title} className="h-16 w-12 rounded object-cover shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{title}</p>
+                    <Link href={`/anime/${item.anime_id}`} className="font-medium truncate hover:text-primary transition-colors">
+                      {title}
+                    </Link>
                     <CardDescription>
                       Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
                     </CardDescription>
+                    {anime?.genres && anime.genres.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {anime.genres.slice(0, 3).map((genre) => (
+                          <Link key={genre} href={`/genre/${encodeURIComponent(genre)}`}>
+                            <Badge variant="secondary" className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground">
+                              {translateGenre(genre)}
+                            </Badge>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm shrink-0`}>
@@ -732,12 +801,12 @@ function PlaylistItemCard({ item }: { item: any }) {
   useEffect(() => {
     getAnimeById(item.anime_id).then(data => {
       setAnime(data)
-      if (data?.idMal) fetchRussianText(data.idMal, data.title?.english, data.title?.romaji)
+      if (data?.idMal) fetchRussianText(data.idMal, data.title?.english, data.title?.romaji, data.title?.native)
     })
   }, [item.anime_id])
 
-const ru = anime?.idMal ? getRussianText(anime.idMal)?.title : ''
-const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
+  const ru = anime?.idMal ? getRussianText(anime.idMal)?.title : ''
+  const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
   const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
 
   return (
@@ -749,7 +818,7 @@ const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.titl
           <Film className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
-      <span className="text-sm truncate">{title}</span>
+      <Link href={`/anime/${item.anime_id}`} className="text-sm truncate hover:text-primary transition-colors">{title}</Link>
     </div>
   )
 }

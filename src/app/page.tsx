@@ -28,6 +28,7 @@ import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { searchWithRussian } from '@/lib/search'
 import { motion } from 'framer-motion'
 import { useRussianText } from '@/lib/russian-cache'
+import { cleanAnimeDescription } from '@/lib/anime-text'
 
 type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
 type GuessMode = 'description' | 'frames'
@@ -77,11 +78,7 @@ function normalizeTitle(value: string): string {
 }
 
 function stripHtml(value: string | null): string {
-  return (value || '')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<\/?[^>]+(>|$)/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return cleanAnimeDescription(value).replace(/\s+/g, ' ').trim()
 }
 
 async function fetchAnimeFrames(anime: AniListAnime): Promise<string[]> {
@@ -514,35 +511,18 @@ export default function HomePage() {
             </motion.div>
 
             <motion.div
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-3 shrink-0"
+              className="glass max-w-sm rounded-2xl p-5 text-sm leading-relaxed text-foreground-secondary lg:min-w-[320px]"
               initial={{ opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="glass rounded-2xl p-4 min-w-[120px]">
-                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
-                  Рейтинг
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Star className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-2xl font-bold text-primary">#1</span>
-                </div>
+              <div className="mb-3 flex items-center gap-2 text-foreground">
+                <SlidersHorizontal className="h-4 w-4 text-primary" />
+                <span className="font-semibold">Каталог без лишнего шума</span>
               </div>
-              <div className="glass rounded-2xl p-4 min-w-[120px]">
-                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
-                  Смотрю
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-accent-foreground" />
-                  <span className="text-2xl font-bold text-accent-foreground">12</span>
-                </div>
-              </div>
-              <div className="glass rounded-2xl p-4 min-w-[120px] col-span-2 sm:col-span-1">
-                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
-                  Сезон
-                </div>
-                <div className="text-2xl font-bold text-foreground">2026</div>
-              </div>
+              <p>
+                Поиск, жанры, сортировка и квиз находятся рядом, а коллекция хранит прогресс без выдуманных показателей.
+              </p>
             </motion.div>
           </div>
         </div>

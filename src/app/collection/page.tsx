@@ -2,25 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Star, Trash2, Edit, Loader2, BookOpen, Sparkles } from 'lucide-react'
 import { EditCollectionDialog } from '@/components/anime/EditCollectionDialog'
 import { AnimeDisplay } from '@/components/anime/AnimeDisplay'
+import { getAnimeById } from '@/lib/anilist/client'
+import { fetchRussianText, getRussianText } from '@/lib/russian-cache'
+import { normalizeAnimeTitleKey } from '@/lib/anime-text'
+import { Database } from '@/types/database'
 
-type AnimeCollection = {
-  id: string
-  user_id: string
-  anime_id: number
-  source: string
-  status: string
-  rating: number | null
-  review: string | null
-  added_at: string
-  updated_at: string
-}
+type AnimeCollection = Database['public']['Tables']['anime_collection']['Row']
 
 export default function CollectionPage() {
   const [collection, setCollection] = useState<AnimeCollection[]>([])
@@ -29,6 +23,7 @@ export default function CollectionPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [editingItem, setEditingItem] = useState<AnimeCollection | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [titleKeys, setTitleKeys] = useState<Record<number, string>>({})
 
   useEffect(() => {
     setMounted(true)
@@ -38,6 +33,39 @@ export default function CollectionPage() {
     if (!mounted) return
     loadCollection()
   }, [mounted])
+
+  useEffect(() => {
+    const missingIds = Array.from(new Set(collection.map(item => item.anime_id)))
+      .filter(id => !titleKeys[id])
+    if (missingIds.length === 0) return
+
+    let cancelled = false
+    Promise.all(missingIds.map(async (id) => {
+      const anime = await getAnimeById(id)
+      if (!anime) return [id, String(id)] as const
+
+      if (anime.idMal) {
+        await fetchRussianText(anime.idMal, anime.title?.english, anime.title?.romaji, anime.title?.native)
+      }
+
+      const russian = anime.idMal ? getRussianText(anime.idMal) : null
+      const title = russian?.title || anime.title?.romaji || anime.title?.english || anime.title?.native || String(id)
+      return [id, normalizeAnimeTitleKey(title) || String(id)] as const
+    })).then((entries) => {
+      if (cancelled) return
+      setTitleKeys(prev => {
+        const next = { ...prev }
+        entries.forEach(([id, key]) => {
+          next[id] = key
+        })
+        return next
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [collection, titleKeys])
 
   const loadCollection = async () => {
     try {
@@ -93,12 +121,16 @@ export default function CollectionPage() {
     ? collection
     : collection.filter(item => item.status === activeTab)
 
+  const countUniqueTitles = (items: AnimeCollection[]) => {
+    return new Set(items.map(item => titleKeys[item.anime_id] || String(item.anime_id))).size
+  }
+
   const counts = {
-    all: collection.length,
-    watching: collection.filter(i => i.status === 'watching').length,
-    completed: collection.filter(i => i.status === 'completed').length,
-    plan_to_watch: collection.filter(i => i.status === 'plan_to_watch').length,
-    dropped: collection.filter(i => i.status === 'dropped').length,
+    all: countUniqueTitles(collection),
+    watching: countUniqueTitles(collection.filter(i => i.status === 'watching')),
+    completed: countUniqueTitles(collection.filter(i => i.status === 'completed')),
+    plan_to_watch: countUniqueTitles(collection.filter(i => i.status === 'plan_to_watch')),
+    dropped: countUniqueTitles(collection.filter(i => i.status === 'dropped')),
   }
 
   const getStatusText = (status: string): string => {
@@ -157,7 +189,7 @@ export default function CollectionPage() {
             <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
           </div>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Всего аниме: {collection.length}
+            Всего тайтлов: {counts.all}
           </p>
         </div>
       </section>

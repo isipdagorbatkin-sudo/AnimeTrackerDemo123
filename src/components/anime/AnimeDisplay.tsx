@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Star, Calendar, PlayCircle, Loader2, Image as ImageIcon } from 'lucide-react'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { translateGenre } from '@/lib/genres'
+import { cleanAnimeDescription } from '@/lib/anime-text'
+import { fetchRussianText, getRussianText } from '@/lib/russian-cache'
+import Link from 'next/link'
 
 interface AnimeDisplayProps {
   animeId: number
@@ -18,7 +21,7 @@ function convertAniListToDisplay(anime: AniListAnime) {
     id: anime.id,
     title: anime.title.romaji || anime.title.english || anime.title.native || 'Без названия',
     titleJapanese: anime.title.native || '',
-    description: anime.description?.replace(/<[^>]*>/g, '') || '',
+    description: cleanAnimeDescription(anime.description),
     imageUrl: getCoverImage(anime),
     genres: anime.genres || [],
     score: anime.meanScore || anime.averageScore || 0,
@@ -44,7 +47,23 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
 
         const data = await getAnimeById(animeId)
         if (data) {
-          setAnime(convertAniListToDisplay(data))
+          const russian = data.idMal ? getRussianText(data.idMal) : null
+          setAnime({
+            ...convertAniListToDisplay(data),
+            title: russian?.title || data.title.romaji || data.title.english || data.title.native || 'Без названия',
+            description: cleanAnimeDescription(russian?.description || data.description),
+          })
+          if (data.idMal) {
+            fetchRussianText(data.idMal, data.title?.english, data.title?.romaji, data.title?.native).then(() => {
+              const updatedRussian = getRussianText(data.idMal || data.id)
+              if (!updatedRussian?.title && !updatedRussian?.description) return
+              setAnime(prev => prev ? {
+                ...prev,
+                title: updatedRussian.title || prev.title,
+                description: cleanAnimeDescription(updatedRussian.description || prev.description),
+              } : prev)
+            })
+          }
           return
         }
 
@@ -54,7 +73,7 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
             id: shikiData.mal_id || shikiData.id,
             title: shikiData.russian || shikiData.name || 'Без названия',
             titleJapanese: shikiData.japanese?.[0] || '',
-            description: shikiData.synopsis || shikiData.description_html?.replace(/<[^>]*>/g, '') || '',
+            description: cleanAnimeDescription(shikiData.synopsis || shikiData.description_html),
             imageUrl: shikiData.image?.original ? (shikiData.image.original.startsWith('/') ? `https://shikimori.one${shikiData.image.original}` : shikiData.image.original) : '',
             genres: (shikiData.genres || []).map(g => g.russian || g.name),
             score: shikiData.score || 0,
@@ -117,9 +136,11 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
         )}
         <div className="flex flex-wrap gap-1">
           {anime?.genres?.slice(0, 3).map((genre, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {translateGenre(genre)}
-            </Badge>
+            <Link key={`${genre}-${index}`} href={`/genre/${encodeURIComponent(genre)}`}>
+              <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground">
+                {translateGenre(genre)}
+              </Badge>
+            </Link>
           ))}
         </div>
         {showFullInfo && (

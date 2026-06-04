@@ -82,6 +82,7 @@ export default function ProfileSettingsPage() {
         .single()
 
       if (error) throw error
+      if (!data) throw new Error('Профиль не найден')
 
       setProfile(data)
       setUsername(data.username)
@@ -182,17 +183,18 @@ export default function ProfileSettingsPage() {
             <Sparkles className="h-5 w-5 sm:h-8 sm:w-8 text-primary animate-pulse" />
           </div>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Управляйте своим профилем
+            Соберите витрину профиля: аватар, баннер, фон страницы, био и любимый тайтл.
           </p>
         </div>
       </section>
 
       <section className="px-4 pb-16">
-        <div className="container mx-auto max-w-2xl space-y-6">
+        <div className="container mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
           <Card className="glass">
             <CardHeader>
-              <CardTitle>Информация профиля</CardTitle>
-              <CardDescription>Обновите свои данные</CardDescription>
+              <CardTitle>Витрина профиля</CardTitle>
+              <CardDescription>Эти поля формируют публичный профиль: как обложка, статусная карточка и любимый тайтл.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-6">
@@ -208,7 +210,7 @@ export default function ProfileSettingsPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 rounded-2xl border border-border/70 bg-background/35 p-4">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={avatarUrl || undefined} />
                     <AvatarFallback className="text-3xl">{getInitials(username)}</AvatarFallback>
@@ -219,39 +221,71 @@ export default function ProfileSettingsPage() {
                       <Camera className="h-4 w-4 mr-2" />
                       Загрузить фото
                     </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Функция загрузки будет добавлена позже
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">Пока используется ссылка ниже. Лучше брать квадратное изображение.</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="avatarUrl">URL аватара</Label>
-                  <Input
-                    id="avatarUrl"
-                    type="url"
-                    placeholder="https://example.com/avatar.jpg"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    disabled={saving}
-                    className="bg-input border"
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="avatarUrl">URL аватара</Label>
+                    <Input
+                      id="avatarUrl"
+                      type="url"
+                      placeholder="https://example.com/avatar.jpg"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      disabled={saving}
+                      className="bg-input border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Имя пользователя</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="animefan2024"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      disabled={saving}
+                      required
+                      minLength={3}
+                      maxLength={30}
+                      className="bg-input border"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">Имя пользователя</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                  <Label htmlFor="bannerUrl">
+                    <Image className="h-4 w-4 inline mr-1" />
+                    URL баннера
+                  </Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="animefan2024"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="bannerUrl"
+                    type="url"
+                    placeholder="https://example.com/banner.jpg"
+                    value={bannerUrl}
+                    onChange={(e) => setBannerUrl(e.target.value)}
                     disabled={saving}
-                    required
-                    minLength={3}
-                    maxLength={30}
                     className="bg-input border"
                   />
+                  </div>
+                  <div className="space-y-2">
+                  <Label htmlFor="backgroundUrl">
+                    <Globe className="h-4 w-4 inline mr-1" />
+                    URL фона страницы
+                  </Label>
+                  <Input
+                    id="backgroundUrl"
+                    type="url"
+                    placeholder="https://example.com/background.jpg"
+                    value={backgroundUrl}
+                    onChange={(e) => setBackgroundUrl(e.target.value)}
+                    disabled={saving}
+                    className="bg-input border"
+                  />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -286,48 +320,6 @@ export default function ProfileSettingsPage() {
                     className="bg-input border min-h-[100px]"
                   />
                   <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bannerUrl">
-                    <Image className="h-4 w-4 inline mr-1" />
-                    URL баннера
-                  </Label>
-                  <Input
-                    id="bannerUrl"
-                    type="url"
-                    placeholder="https://example.com/banner.jpg"
-                    value={bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    disabled={saving}
-                    className="bg-input border"
-                  />
-                  {bannerUrl && (
-                    <div className="relative h-24 rounded-xl overflow-hidden mt-2">
-                      <img src={getProxiedImageUrl(bannerUrl)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="backgroundUrl">
-                    <Globe className="h-4 w-4 inline mr-1" />
-                    URL фона страницы
-                  </Label>
-                  <Input
-                    id="backgroundUrl"
-                    type="url"
-                    placeholder="https://example.com/background.jpg"
-                    value={backgroundUrl}
-                    onChange={(e) => setBackgroundUrl(e.target.value)}
-                    disabled={saving}
-                    className="bg-input border"
-                  />
-                  {backgroundUrl && (
-                    <div className="relative h-16 rounded-xl overflow-hidden mt-2">
-                      <img src={getProxiedImageUrl(backgroundUrl)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -438,6 +430,44 @@ export default function ProfileSettingsPage() {
               </Button>
             </CardContent>
           </Card>
+          </div>
+
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <Card className="glass overflow-hidden">
+              <div
+                className="h-32 bg-cover bg-center"
+                style={{
+                  backgroundImage: bannerUrl
+                    ? `linear-gradient(180deg, rgba(9,10,15,0.1), rgba(9,10,15,0.88)), url(${getProxiedImageUrl(bannerUrl)})`
+                    : 'linear-gradient(135deg, rgba(200,143,90,0.35), rgba(112,143,128,0.16))',
+                }}
+              />
+              <CardContent className="space-y-4 p-5">
+                <div className="flex items-end gap-3">
+                  <Avatar className="-mt-14 h-20 w-20 ring-4 ring-card">
+                    <AvatarImage src={avatarUrl || undefined} />
+                    <AvatarFallback className="text-2xl">{getInitials(username || 'AT')}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 pb-1">
+                    <p className="truncate text-lg font-bold">{username || 'animefan2024'}</p>
+                    <p className="truncate text-xs text-primary">{favoriteAnime ? `Любит: ${favTitle}` : 'Профиль зрителя'}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">О себе</p>
+                  <p className="mt-1 line-clamp-4 text-sm leading-relaxed text-foreground-secondary">
+                    {bio || 'Добавьте пару строк, чтобы профиль не выглядел пустым.'}
+                  </p>
+                </div>
+                {backgroundUrl && (
+                  <div className="relative h-20 overflow-hidden rounded-xl border border-border/70">
+                    <img src={getProxiedImageUrl(backgroundUrl)} alt="" className="h-full w-full object-cover opacity-70" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    <div className="absolute inset-0 bg-black/45" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </section>
     </div>

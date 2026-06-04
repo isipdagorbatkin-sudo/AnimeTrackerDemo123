@@ -25,6 +25,7 @@ import { ShareAnimeDialog } from '@/components/anime/ShareAnimeDialog'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { createClient } from '@/lib/supabase/client'
 import { translateGenre } from '@/lib/genres'
+import { cleanAnimeDescription } from '@/lib/anime-text'
 import Link from 'next/link'
 
 export default function AnimePage() {
@@ -107,7 +108,7 @@ export default function AnimePage() {
   const title = russianText.title || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Без названия'
   const nativeTitle = anime?.title?.native || ''
   const year = anime?.startDate?.year
-  const description = russianText.description || anime?.description?.replace(/<[^>]+>/g, '') || ''
+  const description = cleanAnimeDescription(russianText.description || anime?.description)
   const score = anime?.meanScore || anime?.averageScore || 0
 
   if (!mounted || loading) {

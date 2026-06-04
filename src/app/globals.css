@@ -210,6 +210,18 @@ body::before {
   z-index: 0;
 }
 
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 50% -10%, rgba(200, 143, 90, 0.12), transparent 65%),
+    linear-gradient(180deg, rgba(9, 10, 15, 0) 0%, rgba(9, 10, 15, 0.78) 100%);
+  opacity: 0.9;
+  z-index: 0;
+}
+
 /* ─── Card Base ─── */
 .card-base {
   background: var(--card);
