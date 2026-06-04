@@ -1,3 +1,0 @@
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS profile_title TEXT;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS status_message TEXT;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS accent_color TEXT;

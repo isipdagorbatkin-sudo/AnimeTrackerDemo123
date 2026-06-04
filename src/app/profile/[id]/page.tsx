@@ -17,8 +17,6 @@ import {
 import { useRouter } from 'next/navigation'
 import { getAnimeById, getFullImageUrl, ShikimoriAnime } from '@/lib/shikimori/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
-import { normalizeAnimeTitleKey } from '@/lib/anime-text'
-import Link from 'next/link'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -37,7 +35,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [newPlaylistName, setNewPlaylistName] = useState('')
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
   const [creatingPlaylist, setCreatingPlaylist] = useState(false)
-  const [collectionTitleKeys, setCollectionTitleKeys] = useState<Record<number, string>>({})
   const supabase = createClient()
 
   useEffect(() => {
@@ -48,33 +45,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     if (!mounted) return
     loadProfile()
   }, [params.id, mounted])
-
-  useEffect(() => {
-    const missingIds = Array.from(new Set(collection.map(item => item.anime_id)))
-      .filter(id => !collectionTitleKeys[id])
-
-    if (missingIds.length === 0) return
-
-    let cancelled = false
-    Promise.all(missingIds.map(async (id) => {
-      const anime = await getAnimeById(id)
-      const title = anime?.russian || anime?.name || String(id)
-      return [id, normalizeAnimeTitleKey(title) || String(id)] as const
-    })).then((entries) => {
-      if (cancelled) return
-      setCollectionTitleKeys(prev => {
-        const next = { ...prev }
-        entries.forEach(([id, key]) => {
-          next[id] = key
-        })
-        return next
-      })
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [collection, collectionTitleKeys])
 
   const loadProfile = async () => {
     try {
@@ -266,8 +236,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const completedItems = safeCollection.filter(i => i.status === 'completed')
   const droppedItems = safeCollection.filter(i => i.status === 'dropped')
   const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
-  const uniqueCollectionCount = new Set(safeCollection.map(i => collectionTitleKeys[i.anime_id] || String(i.anime_id))).size
-  const accentColor = profile.accent_color || '#a855f7'
 
   return (
     <div className="min-h-screen relative">
@@ -276,31 +244,29 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <img
             src={getProxiedImageUrl(profile.background_url)}
             alt=""
-            className="w-full h-full object-cover opacity-25"
+            className="w-full h-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/85 to-background" />
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/80 to-background" />
         </div>
       )}
 
       <section className="relative overflow-hidden py-16 px-4">
-        <div className="absolute inset-0 animate-gradient-x" style={{ background: `linear-gradient(120deg, ${accentColor}44, rgba(34, 211, 238, 0.12), ${accentColor}22)` }} />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
           <Button variant="ghost" onClick={() => router.back()} className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" /> Назад
           </Button>
 
-          <Card className="glass overflow-hidden">
+          <Card className="glass">
             {profile.banner_url && (
-              <div className="relative h-52 sm:h-72 overflow-hidden -mx-6 -mt-6 mb-0">
+              <div className="relative h-48 sm:h-64 rounded-t-xl overflow-hidden -mx-6 -mt-6 mb-0">
                 <img
                   src={getProxiedImageUrl(profile.banner_url)}
                   alt=""
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/25 to-transparent" />
-                <div className="absolute inset-0" style={{ boxShadow: `inset 0 -80px 120px ${accentColor}22` }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent" />
               </div>
             )}
             <CardHeader className="pt-8">
@@ -312,11 +278,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   </Avatar>
                   <div className="min-w-0 space-y-2">
                     <CardTitle className="text-2xl sm:text-3xl break-words">{profile.username}</CardTitle>
-                    {profile.profile_title && (
-                      <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium" style={{ color: accentColor }}>
-                        {profile.profile_title}
-                      </div>
-                    )}
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4 shrink-0" />
                       Зарегистрирован: {new Date(profile.created_at).toLocaleDateString('ru-RU')}
@@ -342,26 +303,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                   )}
                 </div>
               </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {[
-                  { label: 'Тайтлов', value: uniqueCollectionCount },
-                  { label: 'Смотрит', value: watchingItems.length },
-                  { label: 'Плейлистов', value: safePlaylists.length },
-                ].map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    <p className="mt-1 text-2xl font-bold" style={{ color: accentColor }}>{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {profile.status_message && (
-                <div className="mt-6 rounded-xl border border-white/10 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Статус</p>
-                  <p className="mt-1 text-sm text-foreground">{profile.status_message}</p>
-                </div>
-              )}
 
               {profile.bio && (
                 <div className="mt-6 flex items-start gap-2 text-base text-muted-foreground">
@@ -400,7 +341,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex-wrap mb-8">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
-                Коллекция ({uniqueCollectionCount})
+                Коллекция ({safeCollection.length})
               </TabsTrigger>
               <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Смотрю ({watchingItems.length})
@@ -605,7 +546,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2">
                     {[
-                      { label: 'Всего тайтлов', value: uniqueCollectionCount },
+                      { label: 'Всего аниме', value: safeCollection.length },
                       { label: 'Смотрю сейчас', value: watchingItems.length },
                       { label: 'Просмотрено', value: completedItems.length },
                       { label: 'В планах', value: planItems.length },
@@ -671,7 +612,6 @@ function CollectionList({
       {items.map((item) => {
         const anime = animeCache[item.anime_id]
         const title = anime?.russian || anime?.name || 'Загрузка...'
-        const titleKey = normalizeAnimeTitleKey(title)
         const imageUrl = anime?.image?.original
           ? getProxiedImageUrl(getFullImageUrl(anime.image.x96 || anime.image.preview))
           : null
@@ -685,26 +625,10 @@ function CollectionList({
                     <img src={imageUrl} alt={title} className="h-16 w-12 rounded object-cover shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <Link href={`/anime/${item.anime_id}`} className="font-medium truncate hover:text-primary transition-colors">
-                      {title}
-                    </Link>
-                    {titleKey && (
-                      <p className="mt-0.5 text-xs text-muted-foreground/70 truncate">Тайтл: {titleKey}</p>
-                    )}
+                    <p className="font-medium truncate">{title}</p>
                     <CardDescription>
                       Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
                     </CardDescription>
-                    {anime?.genres && anime.genres.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {anime.genres.slice(0, 3).map((genre) => (
-                          <Link key={genre.id} href={`/genre/${encodeURIComponent(genre.name)}`}>
-                            <Badge variant="secondary" className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground">
-                              {genre.russian || genre.name}
-                            </Badge>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm shrink-0`}>

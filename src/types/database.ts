@@ -13,9 +13,6 @@ export interface Database {
           banner_url: string | null
           background_url: string | null
           favorite_anime_id: number | null
-          profile_title: string | null
-          status_message: string | null
-          accent_color: string | null
           created_at: string
         }
         Insert: {
@@ -27,9 +24,6 @@ export interface Database {
           banner_url?: string | null
           background_url?: string | null
           favorite_anime_id?: number | null
-          profile_title?: string | null
-          status_message?: string | null
-          accent_color?: string | null
           created_at?: string
         }
         Update: {
@@ -41,9 +35,6 @@ export interface Database {
           banner_url?: string | null
           background_url?: string | null
           favorite_anime_id?: number | null
-          profile_title?: string | null
-          status_message?: string | null
-          accent_color?: string | null
           created_at?: string
         }
       }

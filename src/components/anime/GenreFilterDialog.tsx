@@ -44,17 +44,14 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto border-primary/20 bg-card/95 shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(168,85,247,0.18),transparent_42%),radial-gradient(circle_at_80%_15%,rgba(34,211,238,0.12),transparent_36%)]" />
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="rounded-lg border border-primary/20 bg-primary/10 p-2">
-              <Filter className="h-4 w-4 text-primary" />
-            </span>
+            <Filter className="h-5 w-5 text-purple-400" />
             Фильтр по жанрам
           </DialogTitle>
           <DialogDescription>
-            Выберите жанр или найдите его по русскому и английскому названию.
+            Выберите жанр для фильтрации аниме
           </DialogDescription>
         </DialogHeader>
 
@@ -65,7 +62,7 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
             placeholder="Поиск жанров... (например: Романтика)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-11 bg-background/70 border-primary/15 text-sm focus-visible:ring-primary/40"
+            className="pl-9 h-10 bg-background/60 border-border/70 text-sm"
           />
         </div>
 
@@ -83,10 +80,10 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
                 <Badge
                   key={genre.id}
                   variant={isActive ? 'default' : 'secondary'}
-                  className={`h-8 cursor-pointer select-none rounded-lg px-3 py-1.5 text-xs transition-all duration-200 hover:-translate-y-0.5 ${
+                  className={`cursor-pointer transition-all duration-200 hover:scale-105 select-none text-xs px-3 py-1.5 ${
                     isActive
-                      ? 'bg-gradient-to-r from-primary to-cyan-400 text-white border-transparent shadow-lg shadow-primary/20'
-                      : 'bg-white/[0.03] text-muted-foreground/80 border-border/40 hover:bg-primary/10 hover:text-primary hover:border-primary/35'
+                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-transparent shadow-lg shadow-purple-500/20'
+                      : 'bg-white/[0.03] text-muted-foreground/80 border-border/30 hover:bg-purple-500/10 hover:text-purple-300 hover:border-purple-500/30'
                   }`}
                   onClick={() => {
                     onGenreSelect(selectedGenre === genre.name ? '' : genre.name)

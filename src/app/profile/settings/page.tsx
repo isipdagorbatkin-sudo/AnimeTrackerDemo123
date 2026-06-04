@@ -13,14 +13,6 @@ import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { User, Camera, Save, Loader2, Sparkles, MapPin, Quote, Image, Heart, Search, X, Globe, Film, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-const accentOptions = [
-  { name: 'Фиолетовый', value: '#a855f7' },
-  { name: 'Циан', value: '#22d3ee' },
-  { name: 'Розовый', value: '#ec4899' },
-  { name: 'Зеленый', value: '#22c55e' },
-  { name: 'Янтарный', value: '#f59e0b' },
-]
-
 export default function ProfileSettingsPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<any>(null)
@@ -32,9 +24,6 @@ export default function ProfileSettingsPage() {
   const [backgroundUrl, setBackgroundUrl] = useState('')
   const [favoriteAnimeId, setFavoriteAnimeId] = useState<number | null>(null)
   const [favoriteAnime, setFavoriteAnime] = useState<ShikimoriAnime | null>(null)
-  const [profileTitle, setProfileTitle] = useState('')
-  const [statusMessage, setStatusMessage] = useState('')
-  const [accentColor, setAccentColor] = useState(accentOptions[0].value)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -89,7 +78,6 @@ export default function ProfileSettingsPage() {
         .single()
 
       if (error) throw error
-      if (!data) throw new Error('Профиль не найден')
 
       setProfile(data)
       setUsername(data.username)
@@ -99,9 +87,6 @@ export default function ProfileSettingsPage() {
       setBannerUrl(data.banner_url || '')
       setBackgroundUrl(data.background_url || '')
       setFavoriteAnimeId(data.favorite_anime_id)
-      setProfileTitle(data.profile_title || '')
-      setStatusMessage(data.status_message || '')
-      setAccentColor(data.accent_color || accentOptions[0].value)
 
       if (data.favorite_anime_id) {
         getAnimeById(data.favorite_anime_id).then(setFavoriteAnime)
@@ -133,9 +118,6 @@ export default function ProfileSettingsPage() {
           banner_url: bannerUrl.trim() || null,
           background_url: backgroundUrl.trim() || null,
           favorite_anime_id: favoriteAnimeId,
-          profile_title: profileTitle.trim() || null,
-          status_message: statusMessage.trim() || null,
-          accent_color: accentColor,
         })
         .eq('id', user.id)
 
@@ -198,12 +180,11 @@ export default function ProfileSettingsPage() {
       </section>
 
       <section className="px-4 pb-16">
-        <div className="container mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-6">
+        <div className="container mx-auto max-w-2xl space-y-6">
           <Card className="glass">
             <CardHeader>
-              <CardTitle>Витрина профиля</CardTitle>
-              <CardDescription>Настройте профиль так, чтобы он выглядел как ваша личная аниме-страница.</CardDescription>
+              <CardTitle>Информация профиля</CardTitle>
+              <CardDescription>Обновите свои данные</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-6">
@@ -265,35 +246,6 @@ export default function ProfileSettingsPage() {
                   />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="profileTitle">Титул профиля</Label>
-                    <Input
-                      id="profileTitle"
-                      type="text"
-                      placeholder="Охотник за онгоингами"
-                      value={profileTitle}
-                      onChange={(e) => setProfileTitle(e.target.value)}
-                      disabled={saving}
-                      maxLength={40}
-                      className="bg-input border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="statusMessage">Статус</Label>
-                    <Input
-                      id="statusMessage"
-                      type="text"
-                      placeholder="Сейчас пересматриваю классику"
-                      value={statusMessage}
-                      onChange={(e) => setStatusMessage(e.target.value)}
-                      disabled={saving}
-                      maxLength={80}
-                      className="bg-input border"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="country">
                     <MapPin className="h-4 w-4 inline mr-1" />
@@ -326,27 +278,6 @@ export default function ProfileSettingsPage() {
                     className="bg-input border min-h-[100px]"
                   />
                   <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Акцент профиля</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {accentOptions.map((accent) => (
-                      <button
-                        key={accent.value}
-                        type="button"
-                        onClick={() => setAccentColor(accent.value)}
-                        className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs transition-all ${
-                          accentColor === accent.value
-                            ? 'border-white/40 bg-white/10 text-foreground'
-                            : 'border-border/60 bg-input text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        <span className="h-4 w-4 rounded-full" style={{ backgroundColor: accent.value }} />
-                        {accent.name}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -493,39 +424,6 @@ export default function ProfileSettingsPage() {
               </Button>
             </CardContent>
           </Card>
-          </div>
-
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <Card className="glass overflow-hidden">
-              <div
-                className="h-28 bg-cover bg-center"
-                style={{
-                  backgroundImage: bannerUrl ? `linear-gradient(180deg, rgba(7,7,17,0), rgba(7,7,17,0.85)), url(${getProxiedImageUrl(bannerUrl)})` : `linear-gradient(135deg, ${accentColor}55, rgba(34,211,238,0.16))`,
-                }}
-              />
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-end gap-3">
-                  <Avatar className="-mt-12 h-20 w-20 ring-4 ring-card">
-                    <AvatarImage src={avatarUrl || undefined} />
-                    <AvatarFallback className="text-2xl">{getInitials(username || 'AT')}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 pb-1">
-                    <p className="truncate text-lg font-bold">{username || 'animefan'}</p>
-                    <p className="truncate text-xs" style={{ color: accentColor }}>
-                      {profileTitle || 'Титул профиля'}
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Статус</p>
-                  <p className="mt-1 text-sm text-foreground">{statusMessage || 'Добавьте статус, который увидят гости профиля.'}</p>
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4">
-                  {bio || 'Здесь будет короткое описание профиля.'}
-                </p>
-              </CardContent>
-            </Card>
-          </aside>
         </div>
       </section>
     </div>

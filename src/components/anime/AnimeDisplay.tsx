@@ -6,8 +6,6 @@ import { getAnimeByMalId, getAnimeById, ShikimoriAnime } from '@/lib/shikimori/c
 import { Badge } from '@/components/ui/badge'
 import { Star, Calendar, PlayCircle, Loader2, Image as ImageIcon } from 'lucide-react'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
-import { cleanAnimeDescription } from '@/lib/anime-text'
-import Link from 'next/link'
 
 
 interface AnimeDisplayProps {
@@ -38,7 +36,7 @@ function convertShikimoriToLocal(shiki: ShikimoriAnime): LocalAnime {
     title: shiki.russian || shiki.name,
     titleRussian: shiki.russian || shiki.name,
     titleJapanese: shiki.japanese?.[0] || '',
-    description: cleanAnimeDescription(shiki.synopsis || shiki.description_html),
+    description: shiki.synopsis || shiki.description_html?.replace(/<[^>]*>/g, '') || '',
     imageUrl: img.startsWith('/') ? `https://shikimori.one${img}` : img,
     gradient: getGradient(shiki.id),
     genres: (shiki.genres || []).map(g => g.russian || g.name),
@@ -131,11 +129,9 @@ export function AnimeDisplay({ animeId, showFullInfo = false }: AnimeDisplayProp
         )}
         <div className="flex flex-wrap gap-1">
           {anime?.genres?.slice(0, 3).map((genre, index) => (
-            <Link key={index} href={`/genre/${encodeURIComponent(genre)}`}>
-              <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground">
-                {genre}
-              </Badge>
-            </Link>
+            <Badge key={index} variant="secondary" className="text-xs">
+              {genre}
+            </Badge>
           ))}
         </div>
         {showFullInfo && (

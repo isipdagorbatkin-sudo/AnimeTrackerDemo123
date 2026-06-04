@@ -47,7 +47,7 @@ export default function HomePage() {
   const [remoteSearchQuery, setRemoteSearchQuery] = useState('')
   const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set())
 
-  const genreLoaderRef = useRef<(() => Promise<void>) | null>(null)
+  const genreLoaderRef = useRef<() => Promise<void>>()
 
   const refreshCollection = useCallback(async () => {
     const supabase = createClient()
@@ -84,7 +84,7 @@ export default function HomePage() {
     }
   }, [activeTab])
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const searchCacheRef = useRef(new Map<string, { results: ShikimoriAnime[]; hasMore: boolean; remoteQuery: string }>())
   const requestIdRef = useRef(0)
@@ -133,7 +133,7 @@ export default function HomePage() {
   }, [selectedGenre])
 
   useEffect(() => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    clearTimeout(searchTimeoutRef.current)
     const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery || normalizedQuery.length < 2) {
       if (selectedGenre) {
@@ -193,9 +193,7 @@ export default function HomePage() {
         }
       }
     }, 400)
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-    }
+    return () => clearTimeout(searchTimeoutRef.current)
   }, [searchQuery, selectedGenre])
 
   const loadMore = useCallback(async () => {
@@ -275,10 +273,26 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="hidden lg:block shrink-0 max-w-xs rounded-2xl border border-primary/15 bg-card/40 p-5 text-sm leading-relaxed text-foreground-secondary shadow-[0_20px_60px_rgba(10,8,20,0.3)]">
-              <p>
-                Быстрый поиск, жанры и подборки собраны в одном месте, чтобы сразу перейти к тайтлам без лишнего шума.
-              </p>
+            {/* Quick Stats */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="glass rounded-2xl p-4 min-w-[110px]">
+                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
+                  Топ рейтинг
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-2xl font-bold text-primary">#1</span>
+                </div>
+              </div>
+              <div className="glass rounded-2xl p-4 min-w-[110px]">
+                <div className="text-[0.55rem] font-semibold tracking-wider uppercase text-foreground-secondary mb-1">
+                  Смотрю
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="text-2xl font-bold text-cyan-400">12</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
