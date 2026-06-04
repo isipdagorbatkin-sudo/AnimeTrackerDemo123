@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronDown, Loader2, Play } from 'lucide-react'
+import { ChevronDown, ExternalLink, Loader2, Play, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface KodikResult {
@@ -123,6 +123,47 @@ export function KodikPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Если в Kodik лезет реклама</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-4 text-xs leading-relaxed text-foreground-secondary">
+                <li>Установите AdGuard для браузера или Windows.</li>
+                <li>Обновите страницу после установки.</li>
+                <li>Если реклама осталась, включите фильтр раздражителей в настройках AdGuard.</li>
+              </ol>
+              <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+                Встроить блокировщик прямо в сайт нельзя: Kodik открыт внутри iframe, а расширения ставятся только пользователем в браузер.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:w-44">
+            <a
+              href="https://adguard.com/ru/adguard-browser-extension/overview.html"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Расширение
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <a
+              href="https://adguard.com/ru/download.html?os=windows&show=1"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/45 px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/35 hover:bg-muted/50"
+            >
+              Для Windows
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black">
         {embedUrl ? (
           <iframe
