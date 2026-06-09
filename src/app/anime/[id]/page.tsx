@@ -14,7 +14,7 @@ import {
   AniListCharacter,
 } from '@/lib/anilist/client'
 import { useRussianText } from '@/lib/russian-cache'
-import { KodikPlayer } from '@/components/anime/KodikPlayer'
+import { AnimePlayerHub } from '@/components/anime/AnimePlayerHub'
 import { AnimeFramesStrip } from '@/components/anime/AnimeFramesStrip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -44,7 +44,6 @@ export default function AnimePage() {
   const [similar, setSimilar] = useState<AniListAnime[]>([])
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
-  const [animegoEnabled, setAnimegoEnabled] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -62,7 +61,6 @@ export default function AnimePage() {
           getAnimeCharacters(data.id).then(setCharacters)
           getSimilarAnime(data.id).then(setSimilar)
           getAnimeRelations(data.id).then(setRelations)
-          setAnimegoEnabled(true)
         } else {
           setError('Аниме не найдено')
         }
@@ -427,8 +425,8 @@ export default function AnimePage() {
               <PlayCircle className="h-5 w-5 text-primary" />
               Смотреть
             </h3>
-            {animegoEnabled && anime && (
-              <KodikPlayer
+            {anime && (
+              <AnimePlayerHub
                 animeTitle={title || anime.title?.romaji || anime.title?.english || ''}
                 fallbackTitles={[anime.title?.romaji, anime.title?.english, anime.title?.native].filter(Boolean) as string[]}
                 idMal={anime.idMal}

@@ -34,6 +34,7 @@ export function AnimegoPlayer({ animeTitle }: AnimegoPlayerProps) {
   const [voices, setVoices] = useState<AnimegoVoice[]>([])
   const [selectedVoice, setSelectedVoice] = useState<AnimegoVoice | null>(null)
   const [selectedEpisode, setSelectedEpisode] = useState<number | null>(null)
+  const [selectedAnimeId, setSelectedAnimeId] = useState('')
   const [stream, setStream] = useState<AnimegoStream | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -57,6 +58,7 @@ export function AnimegoPlayer({ animeTitle }: AnimegoPlayerProps) {
       }
 
       const anime = data.results[0]
+      setSelectedAnimeId(anime.id)
       setStatusMessage('Загрузка эпизодов...')
 
       const [epRes, voicesRes] = await Promise.all([
@@ -97,7 +99,7 @@ export function AnimegoPlayer({ animeTitle }: AnimegoPlayerProps) {
 
   const loadEpisodeStream = useCallback(async (episodeNum: number, voice: AnimegoVoice | null, animeId?: string) => {
     const v = voice || selectedVoice
-    const aId = animeId || ''
+    const aId = animeId || selectedAnimeId
     if (!v || !aId) return
 
     setSelectedEpisode(episodeNum)
@@ -127,7 +129,7 @@ export function AnimegoPlayer({ animeTitle }: AnimegoPlayerProps) {
     } finally {
       setLoading(false)
     }
-  }, [selectedVoice])
+  }, [selectedAnimeId, selectedVoice])
 
   useEffect(() => {
     if (animeTitle) {
