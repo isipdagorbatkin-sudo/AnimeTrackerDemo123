@@ -1,12 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Radio, RadioTower, ShieldCheck, Sparkles } from 'lucide-react'
+import { Radio, ShieldCheck, Sparkles, Tv } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AnilibriaPlayer } from '@/components/anime/AnilibriaPlayer'
 import { KodikPlayer } from '@/components/anime/KodikPlayer'
+import { YummyPlayer } from '@/components/anime/YummyPlayer'
 
-type PlayerSource = 'kodik' | 'anilibria'
+type PlayerSource = 'kodik' | 'yummy'
 
 interface AnimePlayerHubProps {
   animeTitle: string
@@ -29,11 +29,11 @@ const SOURCES: {
     icon: Radio,
   },
   {
-    id: 'anilibria',
-    label: 'AniLibria',
-    description: 'Русская озвучка, HLS 720/1080',
-    icon: RadioTower,
-  },
+    id: 'yummy',
+    label: 'Yummy',
+    description: 'Alloha/Aksor, русские озвучки',
+    icon: Tv,
+  }
 ]
 
 export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episodes }: AnimePlayerHubProps) {
@@ -91,7 +91,7 @@ export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episod
         <div className="mb-4 flex items-center gap-2 rounded-2xl border border-border/30 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
           <span className="min-w-0">
-            Сейчас выбран {activeMeta.label}. Оба источника ищутся автоматически, без ручного ввода ссылок.
+            Сейчас выбран {activeMeta.label}. AniLibria убрана, вместо неё добавлен YummyAnime с Alloha/Aksor без ручного ввода ссылок.
           </span>
         </div>
 
@@ -105,10 +105,11 @@ export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episod
           />
         )}
 
-        {activeSource === 'anilibria' && (
-          <AnilibriaPlayer
+        {activeSource === 'yummy' && (
+          <YummyPlayer
             animeTitle={animeTitle}
             fallbackTitles={fallbackTitles}
+            idMal={idMal}
             year={year}
             episodes={episodes}
           />
