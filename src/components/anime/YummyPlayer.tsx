@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Loader2, Play, RotateCcw, Tv } from 'lucide-react'
+import { Loader2, Play, RotateCcw, Tv } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface YummyEpisode {
@@ -28,11 +28,21 @@ interface YummyPlayerProps {
   episodes?: number | null
 }
 
+type SourceMenuTab = 'dubbing' | 'player'
+
 function formatDuration(seconds?: number): string {
   if (!seconds) return ''
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
   return `${minutes}:${String(rest).padStart(2, '0')}`
+}
+
+function cleanPlayerName(value: string): string {
+  return value.replace(/^Плеер\s+/i, '').trim() || value
+}
+
+function cleanDubbingName(value: string): string {
+  return value.replace(/^Озвучка\s+/i, '').trim() || value
 }
 
 export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes }: YummyPlayerProps) {
@@ -42,7 +52,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
   const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showSourceMenu, setShowSourceMenu] = useState(false)
+  const [sourceMenuTab, setSourceMenuTab] = useState<SourceMenuTab>('dubbing')
 
   const selectedSource = useMemo(
     () => sources.find((source) => source.key === selectedSourceKey) || sources[0] || null,
@@ -54,6 +64,13 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     return selectedSource.episodes.find((episode) => episode.id === selectedEpisodeId) || selectedSource.episodes[0] || null
   }, [selectedEpisodeId, selectedSource])
 
+  const providers = useMemo(() => [...new Set(sources.map((source) => source.player))], [sources])
+
+  const providerSources = useMemo(() => {
+    if (!selectedSource) return []
+    return sources.filter((source) => source.player === selectedSource.player)
+  }, [selectedSource, sources])
+
   const loadYummy = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -61,7 +78,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     setAnimeName('')
     setSelectedSourceKey('')
     setSelectedEpisodeId('')
-    setShowSourceMenu(false)
+    setSourceMenuTab('dubbing')
 
     try {
       const queries = [animeTitle, ...(fallbackTitles || [])].filter((value, index, list) => value && list.indexOf(value) === index)
@@ -98,9 +115,15 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
   }, [animeTitle, loadYummy])
 
   const selectSource = (source: YummySource) => {
+    const episodeNumber = selectedEpisode?.number
+    const nextEpisode = source.episodes.find((episode) => episode.number === episodeNumber) || source.episodes[0]
     setSelectedSourceKey(source.key)
-    setSelectedEpisodeId(source.episodes[0]?.id || '')
-    setShowSourceMenu(false)
+    setSelectedEpisodeId(nextEpisode?.id || '')
+  }
+
+  const selectProvider = (player: string) => {
+    const source = sources.find((item) => item.player === player)
+    if (source) selectSource(source)
   }
 
   return (
@@ -141,7 +164,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {selectedSource
-                ? `${animeName || animeTitle} · ${selectedSource.player} · ${selectedSource.dubbing}`
+                ? `${animeName || animeTitle} · ${cleanPlayerName(selectedSource.player)} · ${cleanDubbingName(selectedSource.dubbing)}`
                 : 'Ищет CVH, Holles, Collapse, AniBoom и запасные провайдеры по названию карточки и MAL id.'}
             </p>
           </div>
@@ -157,36 +180,78 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
         </div>
       </div>
 
-      {sources.length > 1 && (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowSourceMenu((value) => !value)}
-            className="flex max-w-full items-center gap-2 rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-left text-sm hover:border-primary/40"
-          >
-            <span className="truncate">
-              {selectedSource ? `${selectedSource.player}: ${selectedSource.dubbing}` : 'Выберите плеер'}
-            </span>
-            <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', showSourceMenu && 'rotate-180')} />
-          </button>
-          {showSourceMenu && (
-            <div className="absolute left-0 top-full z-20 mt-1 max-h-80 w-full min-w-[280px] overflow-y-auto rounded-xl border border-border/50 bg-card py-1 shadow-xl">
-              {sources.map((source) => (
-                <button
-                  key={source.key}
-                  type="button"
-                  onClick={() => selectSource(source)}
-                  className={cn(
-                    'w-full px-4 py-2 text-left text-sm transition-colors hover:bg-muted/50',
-                    source.key === selectedSourceKey && 'font-medium text-primary'
-                  )}
-                >
-                  <span className="block truncate">{source.player}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {source.dubbing} · {source.episodes.length} серий
-                  </span>
-                </button>
-              ))}
+      {sources.length > 0 && (
+        <div className="rounded-2xl border border-border/40 bg-[#151616] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+          <div className="mb-3 flex border-b border-border/40">
+            <button
+              type="button"
+              onClick={() => setSourceMenuTab('dubbing')}
+              className={cn(
+                'relative h-11 px-5 text-left text-base font-semibold transition-colors sm:text-lg',
+                sourceMenuTab === 'dubbing' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Озвучка
+              {sourceMenuTab === 'dubbing' && <span className="absolute inset-x-3 bottom-[-1px] h-px bg-primary" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceMenuTab('player')}
+              className={cn(
+                'relative h-11 px-5 text-left text-base font-semibold transition-colors sm:text-lg',
+                sourceMenuTab === 'player' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Плеер
+              {sourceMenuTab === 'player' && <span className="absolute inset-x-3 bottom-[-1px] h-px bg-primary" />}
+            </button>
+          </div>
+
+          {sourceMenuTab === 'player' ? (
+            <div className="space-y-2">
+              {providers.map((player) => {
+                const active = selectedSource?.player === player
+                return (
+                  <button
+                    key={player}
+                    type="button"
+                    onClick={() => {
+                      selectProvider(player)
+                      setSourceMenuTab('dubbing')
+                    }}
+                    className={cn(
+                      'flex h-12 w-full items-center rounded-lg px-4 text-left text-base font-semibold transition-colors',
+                      active
+                        ? 'bg-muted/70 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/35 hover:text-foreground'
+                    )}
+                  >
+                    {cleanPlayerName(player)}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {providerSources.map((source) => {
+                const active = source.key === selectedSourceKey
+                return (
+                  <button
+                    key={source.key}
+                    type="button"
+                    onClick={() => selectSource(source)}
+                    className={cn(
+                      'flex min-h-12 w-full items-center justify-between gap-3 rounded-lg px-4 py-2 text-left transition-colors',
+                      active
+                        ? 'bg-muted/70 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/35 hover:text-foreground'
+                    )}
+                  >
+                    <span className="min-w-0 truncate text-base font-semibold">{cleanDubbingName(source.dubbing)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{source.episodes.length} серий</span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
