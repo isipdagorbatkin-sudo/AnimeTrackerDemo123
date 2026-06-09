@@ -13,7 +13,7 @@ import {
   AniListAnime,
   AniListCharacter,
 } from '@/lib/anilist/client'
-import { useRussianText } from '@/lib/russian-cache'
+import { useRussianText, useRussianTitle } from '@/lib/russian-cache'
 import { AnimePlayerHub } from '@/components/anime/AnimePlayerHub'
 import { AnimeFramesStrip } from '@/components/anime/AnimeFramesStrip'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,6 +27,13 @@ import { createClient } from '@/lib/supabase/client'
 import { translateGenre } from '@/lib/genres'
 import { cleanAnimeDescription } from '@/lib/anime-text'
 import Link from 'next/link'
+
+const DESCRIPTION_LIMIT = 750
+
+function TranslatedAnimeTitle({ anime, className }: { anime: AniListAnime; className?: string }) {
+  const title = useRussianTitle(anime)
+  return <p className={className}>{title}</p>
+}
 
 export default function AnimePage() {
   const params = useParams()
@@ -44,6 +51,7 @@ export default function AnimePage() {
   const [similar, setSimilar] = useState<AniListAnime[]>([])
   const [relations, setRelations] = useState<{ relationType: string; node: AniListAnime }[]>([])
   const [isInCollection, setIsInCollection] = useState(false)
+  const [showFullDescription, setShowFullDescription] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -76,6 +84,10 @@ export default function AnimePage() {
     loadAnime()
   }, [animeId, mounted])
 
+  useEffect(() => {
+    setShowFullDescription(false)
+  }, [animeId])
+
   const checkInCollection = async (id: number) => {
     try {
       const supabase = createClient()
@@ -107,6 +119,10 @@ export default function AnimePage() {
   const nativeTitle = anime?.title?.native || ''
   const year = anime?.startDate?.year
   const description = cleanAnimeDescription(russianText.description || anime?.description)
+  const shouldCollapseDescription = description.length > DESCRIPTION_LIMIT
+  const visibleDescription = shouldCollapseDescription && !showFullDescription
+    ? `${description.slice(0, DESCRIPTION_LIMIT).trim()}...`
+    : description
   const score = anime?.meanScore || anime?.averageScore || 0
 
   if (!mounted || loading) {
@@ -352,8 +368,17 @@ export default function AnimePage() {
                   Описание
                 </h3>
                 <div className="text-muted-foreground leading-relaxed text-sm sm:text-base md:text-lg break-words">
-                  {description}
+                  {visibleDescription}
                 </div>
+                {shouldCollapseDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFullDescription((value) => !value)}
+                    className="mt-3 inline-flex h-9 items-center rounded-xl border border-border/50 bg-card/60 px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/35 hover:bg-muted/45"
+                  >
+                    {showFullDescription ? 'Свернуть' : 'Посмотреть полностью'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -400,7 +425,6 @@ export default function AnimePage() {
                   </div>
                   {seasonRelations.map((rel) => {
                     const relAnime = rel.node
-                    const relTitle = relAnime.title?.romaji || relAnime.title?.english || relAnime.title?.native || 'Без названия'
                     return (
                       <Link
                         key={`${rel.relationType}-${relAnime.id}`}
@@ -410,7 +434,7 @@ export default function AnimePage() {
                         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
                           {relationLabel(rel.relationType)}
                         </div>
-                        <div className="font-semibold line-clamp-2">{relTitle}</div>
+                        <TranslatedAnimeTitle anime={relAnime} className="font-semibold line-clamp-2" />
                         <div className="mt-1 text-xs text-muted-foreground">
                           {[relAnime.startDate?.year, relAnime.episodes ? `${relAnime.episodes} эп.` : null].filter(Boolean).join(' · ') || 'подробнее'}
                         </div>
@@ -472,7 +496,7 @@ export default function AnimePage() {
                                 </div>
                               )}
                             </div>
-                            <p className="text-xs font-medium line-clamp-2">{relTitle}</p>
+                            <TranslatedAnimeTitle anime={a} className="text-xs font-medium line-clamp-2" />
                           </Link>
                         )
                       })}
@@ -508,7 +532,7 @@ export default function AnimePage() {
                           </div>
                         )}
                       </div>
-                      <p className="text-xs font-medium line-clamp-2">{simTitle}</p>
+                      <TranslatedAnimeTitle anime={a} className="text-xs font-medium line-clamp-2" />
                     </Link>
                   )
                 })}

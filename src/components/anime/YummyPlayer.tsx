@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Play, RotateCcw, Tv } from 'lucide-react'
+import { ArrowLeft, ArrowRight, List, Loader2, Play, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface YummyEpisode {
+interface PlayerEpisode {
   id: string
   number: number
   label: string
@@ -13,11 +13,32 @@ interface YummyEpisode {
   views?: number
 }
 
-interface YummySource {
+interface PlayerSource {
   key: string
   player: string
   dubbing: string
-  episodes: YummyEpisode[]
+  episodes: PlayerEpisode[]
+}
+
+interface KodikResult {
+  id?: string
+  link?: string
+  title?: string
+  title_orig?: string
+  other_title?: string
+  year?: number
+  episodes_count?: number
+  last_episode?: number
+  translation?: {
+    id?: number
+    title?: string
+    type?: string
+  }
+  material_data?: {
+    year?: number
+    episodes_total?: number
+    episodes_aired?: number
+  }
 }
 
 interface YummyPlayerProps {
@@ -29,6 +50,8 @@ interface YummyPlayerProps {
 }
 
 type SourceMenuTab = 'dubbing' | 'player'
+
+const EPISODES_SECTION_ID = 'anime-player-episodes'
 
 function formatDuration(seconds?: number): string {
   if (!seconds) return ''
@@ -45,14 +68,59 @@ function cleanDubbingName(value: string): string {
   return value.replace(/^Озвучка\s+/i, '').trim() || value
 }
 
+function getKodikEmbedLink(result: KodikResult): string {
+  const link = result.link || ''
+  return link.startsWith('http') ? link : `https:${link}`
+}
+
+function getKodikEpisodeCount(result: KodikResult): number | null {
+  return Number(
+    result.episodes_count ||
+    result.last_episode ||
+    result.material_data?.episodes_total ||
+    result.material_data?.episodes_aired ||
+    0
+  ) || null
+}
+
+function getKodikKey(result: KodikResult, index: number): string {
+  return `kodik:${result.id || index}:${result.translation?.id || 'default'}:${result.link || index}`
+}
+
+function mapKodikSources(results: KodikResult[]): PlayerSource[] {
+  return results
+    .filter((result) => Boolean(result.link))
+    .slice(0, 16)
+    .map((result, index) => {
+      const count = getKodikEpisodeCount(result)
+      const releaseYear = result.year || result.material_data?.year
+      const titleMeta = [releaseYear, count ? `${count} эп.` : null].filter(Boolean).join(' / ')
+      return {
+        key: getKodikKey(result, index),
+        player: 'Kodik',
+        dubbing: result.translation?.title || 'Kodik',
+        episodes: [
+          {
+            id: `${getKodikKey(result, index)}:embed`,
+            number: 1,
+            label: titleMeta || 'Плеер',
+            iframeUrl: getKodikEmbedLink(result),
+          },
+        ],
+      }
+    })
+}
+
 export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes }: YummyPlayerProps) {
-  const [sources, setSources] = useState<YummySource[]>([])
+  const [sources, setSources] = useState<PlayerSource[]>([])
   const [animeName, setAnimeName] = useState('')
   const [selectedSourceKey, setSelectedSourceKey] = useState('')
   const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sourceMenuTab, setSourceMenuTab] = useState<SourceMenuTab>('dubbing')
+
+  const storageKey = useMemo(() => `anime-player:${idMal || animeTitle}`, [animeTitle, idMal])
 
   const selectedSource = useMemo(
     () => sources.find((source) => source.key === selectedSourceKey) || sources[0] || null,
@@ -64,6 +132,11 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     return selectedSource.episodes.find((episode) => episode.id === selectedEpisodeId) || selectedSource.episodes[0] || null
   }, [selectedEpisodeId, selectedSource])
 
+  const selectedEpisodeIndex = useMemo(() => {
+    if (!selectedSource || !selectedEpisode) return -1
+    return selectedSource.episodes.findIndex((episode) => episode.id === selectedEpisode.id)
+  }, [selectedEpisode, selectedSource])
+
   const providers = useMemo(() => [...new Set(sources.map((source) => source.player))], [sources])
 
   const providerSources = useMemo(() => {
@@ -71,7 +144,13 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     return sources.filter((source) => source.player === selectedSource.player)
   }, [selectedSource, sources])
 
-  const loadYummy = useCallback(async () => {
+  const persistChoice = useCallback((sourceKey: string, episodeId: string) => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({ sourceKey, episodeId }))
+    } catch {}
+  }, [storageKey])
+
+  const loadPlayers = useCallback(async () => {
     setLoading(true)
     setError('')
     setSources([])
@@ -88,43 +167,84 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
       if (year) params.set('year', String(year))
       if (episodes) params.set('episodes', String(episodes))
 
-      const res = await fetch(`/api/yummy/search?${params.toString()}`)
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'YummyAnime не нашёл видео')
+      const [yummyResult, kodikResult] = await Promise.allSettled([
+        fetch(`/api/yummy/search?${params.toString()}`).then(async (res) => ({ ok: res.ok, data: await res.json() })),
+        fetch(`/api/kodik/search?${params.toString()}`).then(async (res) => ({ ok: res.ok, data: await res.json() })),
+      ])
 
-      const list: YummySource[] = data.sources || []
+      const yummyData = yummyResult.status === 'fulfilled' ? yummyResult.value : null
+      const kodikData = kodikResult.status === 'fulfilled' ? kodikResult.value : null
+      const yummySources: PlayerSource[] = yummyData?.ok && yummyData.data?.success ? yummyData.data.sources || [] : []
+      const kodikSources = kodikData?.ok && kodikData.data?.success ? mapKodikSources(kodikData.data.results || []) : []
+      const list = [...yummySources, ...kodikSources]
       const firstSource = list[0]
       const firstEpisode = firstSource?.episodes?.[0]
-      if (!firstSource || !firstEpisode) throw new Error('YummyAnime вернул пустой список серий')
+
+      if (!firstSource || !firstEpisode) {
+        const yummyError = yummyData?.data?.error
+        const kodikError = kodikData?.data?.error
+        throw new Error(yummyError || kodikError || 'Видео для этого тайтла не найдено')
+      }
+
+      let nextSource = firstSource
+      let nextEpisode = firstEpisode
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(storageKey) || '{}') as { sourceKey?: string; episodeId?: string }
+        const savedSource = list.find((source) => source.key === saved.sourceKey)
+        if (savedSource) {
+          nextSource = savedSource
+          nextEpisode = savedSource.episodes.find((episode) => episode.id === saved.episodeId) || savedSource.episodes[0] || nextEpisode
+        }
+      } catch {}
 
       setSources(list)
-      setAnimeName(data.anime?.title || '')
-      setSelectedSourceKey(firstSource.key)
-      setSelectedEpisodeId(firstEpisode.id)
+      setAnimeName(yummyData?.data?.anime?.title || '')
+      setSelectedSourceKey(nextSource.key)
+      setSelectedEpisodeId(nextEpisode.id)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Ошибка YummyAnime'
+      const message = err instanceof Error ? err.message : 'Ошибка загрузки плееров'
       setError(message)
     } finally {
       setLoading(false)
     }
-  }, [animeTitle, episodes, fallbackTitles, idMal, year])
+  }, [animeTitle, episodes, fallbackTitles, idMal, storageKey, year])
 
   useEffect(() => {
     if (!animeTitle) return
-    void loadYummy()
-  }, [animeTitle, loadYummy])
+    void loadPlayers()
+  }, [animeTitle, loadPlayers])
 
-  const selectSource = (source: YummySource) => {
+  const selectSource = (source: PlayerSource) => {
     const episodeNumber = selectedEpisode?.number
     const nextEpisode = source.episodes.find((episode) => episode.number === episodeNumber) || source.episodes[0]
     setSelectedSourceKey(source.key)
     setSelectedEpisodeId(nextEpisode?.id || '')
+    persistChoice(source.key, nextEpisode?.id || '')
   }
 
   const selectProvider = (player: string) => {
     const source = sources.find((item) => item.player === player)
     if (source) selectSource(source)
   }
+
+  const selectEpisode = (episode: PlayerEpisode) => {
+    if (!selectedSource) return
+    setSelectedEpisodeId(episode.id)
+    persistChoice(selectedSource.key, episode.id)
+  }
+
+  const selectEpisodeByOffset = (offset: number) => {
+    if (!selectedSource || selectedEpisodeIndex < 0) return
+    const nextEpisode = selectedSource.episodes[selectedEpisodeIndex + offset]
+    if (nextEpisode) selectEpisode(nextEpisode)
+  }
+
+  const scrollToEpisodes = () => {
+    document.getElementById(EPISODES_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const canGoPrev = selectedEpisodeIndex > 0
+  const canGoNext = Boolean(selectedSource && selectedEpisodeIndex >= 0 && selectedEpisodeIndex < selectedSource.episodes.length - 1)
 
   return (
     <div className="space-y-4">
@@ -143,7 +263,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
             {loading ? (
               <div className="text-center">
                 <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Ищем альтернативный плеер...</p>
+                <p className="text-sm text-muted-foreground">Ищем плеер...</p>
               </div>
             ) : (
               <div className="max-w-md p-5 text-center">
@@ -155,22 +275,49 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
         )}
       </div>
 
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <button
+          type="button"
+          onClick={() => selectEpisodeByOffset(-1)}
+          disabled={!canGoPrev}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/45 bg-card/55 px-3 text-xs font-semibold transition-colors hover:border-primary/35 hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-45 sm:text-sm"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Предыдущая серия</span>
+          <span className="sm:hidden">Назад</span>
+        </button>
+        <button
+          type="button"
+          onClick={scrollToEpisodes}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:text-sm"
+        >
+          <List className="h-4 w-4" />
+          Все серии
+        </button>
+        <button
+          type="button"
+          onClick={() => selectEpisodeByOffset(1)}
+          disabled={!canGoNext}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/45 bg-card/55 px-3 text-xs font-semibold transition-colors hover:border-primary/35 hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-45 sm:text-sm"
+        >
+          <span className="hidden sm:inline">Следующая серия</span>
+          <span className="sm:hidden">Вперед</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-border/40 bg-card/55 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Tv className="h-4 w-4 text-primary" />
-              Экспериментальные плееры
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="truncate text-sm font-semibold">
               {selectedSource
                 ? `${animeName || animeTitle} · ${cleanPlayerName(selectedSource.player)} · ${cleanDubbingName(selectedSource.dubbing)}`
-                : 'Ищет CVH, Holles, Collapse, AniBoom и запасные провайдеры по названию карточки и MAL id.'}
+                : 'Плеер'}
             </p>
           </div>
           <button
             type="button"
-            onClick={() => void loadYummy()}
+            onClick={() => void loadPlayers()}
             disabled={loading}
             className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-border/50 bg-background/45 px-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/35 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -208,7 +355,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
           </div>
 
           {sourceMenuTab === 'player' ? (
-            <div className="space-y-2">
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
               {providers.map((player) => {
                 const active = selectedSource?.player === player
                 return (
@@ -232,7 +379,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
               })}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
               {providerSources.map((source) => {
                 const active = source.key === selectedSourceKey
                 return (
@@ -248,7 +395,9 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
                     )}
                   >
                     <span className="min-w-0 truncate text-base font-semibold">{cleanDubbingName(source.dubbing)}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{source.episodes.length} серий</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {source.episodes.length > 1 ? `${source.episodes.length} серий` : cleanPlayerName(source.player)}
+                    </span>
                   </button>
                 )
               })}
@@ -264,7 +413,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
       )}
 
       {selectedSource && selectedSource.episodes.length > 0 && (
-        <div>
+        <div id={EPISODES_SECTION_ID}>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">Серии ({selectedSource.episodes.length})</p>
             {selectedEpisode?.duration ? (
@@ -276,16 +425,16 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
               <button
                 key={episode.id}
                 type="button"
-                onClick={() => setSelectedEpisodeId(episode.id)}
+                onClick={() => selectEpisode(episode)}
                 disabled={loading}
                 className={cn(
-                  'flex aspect-[3/2] items-center justify-center rounded-lg border text-xs font-medium transition-all',
+                  'flex aspect-[3/2] items-center justify-center rounded-lg border px-1 text-xs font-medium transition-all',
                   selectedEpisode?.id === episode.id
                     ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30'
                     : 'border-border/30 bg-card/50 hover:border-primary/40 hover:bg-primary/5'
                 )}
               >
-                {episode.number}
+                {episode.label === 'Плеер' ? episode.label : episode.number}
               </button>
             ))}
           </div>
