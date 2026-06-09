@@ -1,13 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Clapperboard, Flame, Radio, ShieldCheck, Sparkles } from 'lucide-react'
+import { Flame, Radio, ShieldCheck, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AnimegoPlayer } from '@/components/anime/AnimegoPlayer'
 import { AnfirePlayer } from '@/components/anime/AnfirePlayer'
 import { KodikPlayer } from '@/components/anime/KodikPlayer'
 
-type PlayerSource = 'kodik' | 'animego' | 'anfire'
+type PlayerSource = 'kodik' | 'anfire'
 
 interface AnimePlayerHubProps {
   animeTitle: string
@@ -28,12 +27,6 @@ const SOURCES: {
     label: 'Kodik',
     description: 'Быстрый iframe и много озвучек',
     icon: Radio,
-  },
-  {
-    id: 'animego',
-    label: 'AnimeGO',
-    description: 'Нативное видео, если поток доступен',
-    icon: Clapperboard,
   },
   {
     id: 'anfire',
@@ -61,7 +54,7 @@ export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episod
               Выбери источник. Если один плеер тупит или не нашел тайтл, переключись на другой.
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[560px]">
+          <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[420px]">
             {SOURCES.map((source) => {
               const Icon = source.icon
               const active = source.id === activeSource
@@ -110,10 +103,6 @@ export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episod
             year={year}
             episodes={episodes}
           />
-        )}
-
-        {activeSource === 'animego' && (
-          <AnimegoPlayer animeTitle={animeTitle} />
         )}
 
         {activeSource === 'anfire' && (
