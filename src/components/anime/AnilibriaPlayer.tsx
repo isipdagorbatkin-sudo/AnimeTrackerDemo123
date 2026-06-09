@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Loader2, Play, RadioTower, RotateCcw } from 'lucide-react'
+import { ChevronDown, Loader2, Play, RadioTower, RotateCcw, Tv } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AnilibriaEpisode {
@@ -37,6 +37,7 @@ interface AnilibriaPlayerProps {
 }
 
 type Quality = '1080' | '720' | '480'
+type PlaybackMode = 'iframe' | 'hls'
 
 function getEpisodeUrl(episode: AnilibriaEpisode | null, quality: Quality): string {
   if (!episode) return ''
@@ -58,6 +59,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
   const [release, setRelease] = useState<AnilibriaRelease | null>(null)
   const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
   const [quality, setQuality] = useState<Quality>('720')
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('iframe')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showEpisodeMenu, setShowEpisodeMenu] = useState(false)
@@ -68,6 +70,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
     [release, selectedEpisodeId]
   )
   const sourceUrl = useMemo(() => getEpisodeUrl(selectedEpisode, quality), [quality, selectedEpisode])
+  const iframeUrl = release?.external_player || ''
   const qualities = useMemo(() => availableQualities(selectedEpisode), [selectedEpisode])
 
   const loadRelease = useCallback(async () => {
@@ -91,6 +94,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
       const foundRelease: AnilibriaRelease = data.release
       const firstEpisode = foundRelease.episodes?.[0]
       setRelease(foundRelease)
+      setPlaybackMode(foundRelease.external_player ? 'iframe' : 'hls')
       if (firstEpisode) {
         setSelectedEpisodeId(firstEpisode.id)
         setQuality(firstEpisode.hls_1080 ? '1080' : firstEpisode.hls_720 ? '720' : '480')
@@ -109,7 +113,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
   }, [animeTitle, loadRelease])
 
   useEffect(() => {
-    if (!videoRef.current || !sourceUrl) return
+    if (playbackMode !== 'hls' || !videoRef.current || !sourceUrl) return
     let hls: any = null
     const video = videoRef.current
 
@@ -138,7 +142,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
       video.removeAttribute('src')
       video.load()
     }
-  }, [sourceUrl])
+  }, [playbackMode, sourceUrl])
 
   const selectEpisode = (episode: AnilibriaEpisode) => {
     setSelectedEpisodeId(episode.id)
@@ -149,7 +153,16 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
   return (
     <div className="space-y-4">
       <div className="relative w-full aspect-video overflow-hidden rounded-2xl border border-border/35 bg-black shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
-        {sourceUrl ? (
+        {playbackMode === 'iframe' && iframeUrl ? (
+          <iframe
+            key={iframeUrl}
+            src={iframeUrl}
+            className="h-full w-full"
+            allowFullScreen
+            allow="autoplay; fullscreen"
+            referrerPolicy="no-referrer"
+          />
+        ) : sourceUrl ? (
           <video
             ref={videoRef}
             controls
@@ -199,13 +212,46 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
         </div>
       </div>
 
+      {release && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPlaybackMode('iframe')}
+            disabled={!iframeUrl}
+            className={cn(
+              'inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+              playbackMode === 'iframe'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border/45 bg-card/55 text-muted-foreground hover:border-primary/35 hover:text-foreground'
+            )}
+          >
+            <Tv className="h-4 w-4" />
+            Встроенный плеер
+          </button>
+          <button
+            type="button"
+            onClick={() => setPlaybackMode('hls')}
+            disabled={!sourceUrl}
+            className={cn(
+              'inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+              playbackMode === 'hls'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border/45 bg-card/55 text-muted-foreground hover:border-primary/35 hover:text-foreground'
+            )}
+          >
+            <RadioTower className="h-4 w-4" />
+            Прямой поток
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {selectedEpisode && (
+      {selectedEpisode && playbackMode === 'hls' && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative">
             <button
@@ -262,7 +308,7 @@ export function AnilibriaPlayer({ animeTitle, fallbackTitles, year, episodes: ex
         </div>
       )}
 
-      {release?.episodes && release.episodes.length > 0 && (
+      {release?.episodes && release.episodes.length > 0 && playbackMode === 'hls' && (
         <div>
           <p className="mb-2 text-sm text-muted-foreground">Серии ({release.episodes.length})</p>
           <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
