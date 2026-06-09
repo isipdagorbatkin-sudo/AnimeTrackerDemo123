@@ -137,12 +137,12 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Tv className="h-4 w-4 text-primary" />
-              YummyAnime
+              Экспериментальные плееры
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {selectedSource
                 ? `${animeName || animeTitle} · ${selectedSource.player} · ${selectedSource.dubbing}`
-                : 'Ищет Alloha/Aksor по названию карточки и MAL id.'}
+                : 'Ищет CVH, Holles, Collapse, AniBoom и запасные провайдеры по названию карточки и MAL id.'}
             </p>
           </div>
           <button

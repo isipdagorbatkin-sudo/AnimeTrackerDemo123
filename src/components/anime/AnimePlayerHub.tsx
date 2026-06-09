@@ -30,8 +30,8 @@ const SOURCES: {
   },
   {
     id: 'yummy',
-    label: 'Yummy',
-    description: 'Alloha, русские озвучки',
+    label: 'Эксперимент',
+    description: 'CVH/Sibnet и другие провайдеры',
     icon: Tv,
   }
 ]
@@ -91,7 +91,7 @@ export function AnimePlayerHub({ animeTitle, fallbackTitles, idMal, year, episod
         <div className="mb-4 flex items-center gap-2 rounded-2xl border border-border/30 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
           <span className="min-w-0">
-            Сейчас выбран {activeMeta.label}. AniLibria и Aksor убраны, вместо них добавлен YummyAnime с Alloha без ручного ввода ссылок.
+            Сейчас выбран {activeMeta.label}. Alloha и Aksor убраны, тут показываются CVH, Holles, Collapse, AniBoom или Sibnet, если источник нашёл их для тайтла.
           </span>
         </div>
 
