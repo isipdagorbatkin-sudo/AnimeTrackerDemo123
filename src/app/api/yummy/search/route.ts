@@ -110,14 +110,13 @@ function absolutizeUrl(value: string | null | undefined): string {
 function isAlternativePlayer(video: YummyVideo): boolean {
   const player = String(video.data?.player || '').toLowerCase()
   const dubbing = String(video.data?.dubbing || '').toLowerCase()
-  const supportedPlayer = player.includes('aksor') || player.includes('alloha')
+  const supportedPlayer = player.includes('alloha')
   const unsupportedDubbing = dubbing.includes('субтит') || dubbing.includes('казах')
   return Boolean(video.iframe_url) && supportedPlayer && !unsupportedDubbing
 }
 
 function sourcePriority(player: string): number {
   const normalized = player.toLowerCase()
-  if (normalized.includes('aksor')) return 30
   if (normalized.includes('alloha')) return 20
   return 10
 }
