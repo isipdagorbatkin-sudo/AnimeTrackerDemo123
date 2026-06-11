@@ -115,13 +115,16 @@ export function CollectionAnimeCard({
       tabIndex={0}
       onClick={openAnime}
       onKeyDown={onCardKeyDown}
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/55 bg-card/65 shadow-[0_18px_50px_rgba(0,0,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="group relative cursor-pointer overflow-hidden rounded-sm border border-white/15 bg-[#111113]/88 shadow-[0_24px_54px_rgba(0,0,0,0.32)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:bg-[#1a1a1d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
+      {imageUrl && !imageError && (
+        <img src={imageUrl} alt="" className="poster-glow h-full w-full object-cover" />
+      )}
       <div className={cn('relative z-10 grid gap-4 p-3 sm:p-4', compact ? 'sm:grid-cols-[88px_minmax(0,1fr)]' : 'sm:grid-cols-[104px_minmax(0,1fr)]')}>
         <Link
           href={href}
           className={cn(
-            'block overflow-hidden rounded-xl border border-border/55 bg-muted shadow-lg shadow-black/20',
+            'relative block overflow-hidden rounded-sm border border-white/10 bg-[#111113] shadow-lg shadow-black/30',
             compact ? 'h-32 w-24 sm:h-32 sm:w-[88px]' : 'h-36 w-24 sm:h-36 sm:w-[104px]'
           )}
           aria-hidden="true"
@@ -131,12 +134,12 @@ export function CollectionAnimeCard({
             <img
               src={imageUrl}
               alt={title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/18 to-muted">
+            <div className="flex h-full w-full items-center justify-center bg-[#1e1e20]">
               <Film className="h-8 w-8 text-muted-foreground" />
             </div>
           )}
@@ -145,33 +148,33 @@ export function CollectionAnimeCard({
         <div className="min-w-0">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <Link href={href} className="relative z-20 line-clamp-2 text-base font-bold leading-snug transition-colors hover:text-primary sm:text-lg">
+              <Link href={href} className="relative z-20 line-clamp-2 text-base font-bold leading-snug tracking-wide transition-colors hover:text-primary sm:text-lg">
                 {title}
               </Link>
               {nativeTitle && (
-                <p className="mt-1 truncate text-xs text-muted-foreground">{nativeTitle}</p>
+              <p className="mt-1 truncate text-xs text-white/45">{nativeTitle}</p>
               )}
             </div>
-            <Badge className={cn(getStatusColor(item.status), 'relative z-20 w-fit shrink-0 border backdrop-blur-sm')}>
+            <Badge className={cn(getStatusColor(item.status), 'relative z-20 w-fit shrink-0 rounded-sm border backdrop-blur-sm')}>
               {getStatusText(item.status)}
             </Badge>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/55 bg-background/35 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 border border-white/12 bg-black/25 px-2.5 py-1">
               <Calendar className="h-3.5 w-3.5" />
               {new Date(item.added_at).toLocaleDateString('ru-RU')}
             </span>
-            {year && <span className="rounded-full border border-border/55 bg-background/35 px-2.5 py-1">{year}</span>}
-            {episodes && <span className="rounded-full border border-border/55 bg-background/35 px-2.5 py-1">{episodes} эп.</span>}
+            {year && <span className="border border-white/12 bg-black/25 px-2.5 py-1">{year}</span>}
+            {episodes && <span className="border border-white/12 bg-black/25 px-2.5 py-1">{episodes} эп.</span>}
             {score > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-yellow-300">
+              <span className="inline-flex items-center gap-1 border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-yellow-300">
                 <Star className="h-3.5 w-3.5 fill-yellow-300" />
                 {(score / 10).toFixed(1)}
               </span>
             )}
             {item.rating && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary">
+              <span className="inline-flex items-center gap-1 border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary">
                 Моя оценка {item.rating}/100
               </span>
             )}
@@ -181,7 +184,7 @@ export function CollectionAnimeCard({
             <div className="relative z-20 mt-3 flex flex-wrap gap-1.5">
               {anime.genres.slice(0, compact ? 3 : 5).map((genre) => (
                 <Link key={genre} href={`/genre/${encodeURIComponent(genre)}`}>
-                  <Badge variant="secondary" className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground">
+                  <Badge variant="secondary" className="cursor-pointer rounded-sm bg-[#232326] text-xs text-white/60 hover:bg-primary hover:text-primary-foreground">
                     {translateGenre(genre)}
                   </Badge>
                 </Link>
@@ -196,13 +199,13 @@ export function CollectionAnimeCard({
           {(onEdit || onDelete) && (
             <div className="relative z-20 mt-4 flex flex-wrap gap-2">
               {onEdit && (
-                <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+                <Button variant="outline" size="sm" className="rounded-sm" onClick={() => onEdit(item)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Изменить
                 </Button>
               )}
               {onDelete && (
-                <Button variant="outline" size="sm" onClick={() => onDelete(item.id)}>
+                <Button variant="outline" size="sm" className="rounded-sm" onClick={() => onDelete(item.id)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Удалить
                 </Button>

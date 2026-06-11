@@ -57,7 +57,7 @@ export function GenreFilterDialog({ isOpen, onClose, selectedGenre, onGenreSelec
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto border-primary/20 bg-card/95 shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_0%,rgba(200,143,90,0.18),transparent_42%),radial-gradient(circle_at_82%_12%,rgba(112,143,128,0.14),transparent_38%)]" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_0%,rgba(239,68,68,0.18),transparent_42%),radial-gradient(circle_at_82%_12%,rgba(90,94,103,0.18),transparent_38%)]" />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="rounded-lg border border-primary/20 bg-primary/10 p-2">

@@ -50,16 +50,19 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
   return (
     <>
       <motion.div
-        className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/85 backdrop-blur-sm shadow-[0_18px_55px_rgba(5,5,10,0.38)] transition-colors duration-300 hover:border-primary/40 hover:shadow-[0_24px_70px_rgba(200,143,90,0.14)]"
+        className="group relative z-0 w-full overflow-visible transition-all duration-300 hover:z-30"
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '80px' }}
-        whileHover={{ y: -5 }}
+        whileHover={{ scale: 1.06 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(200,143,90,0.12),transparent_50%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <Link href={`/anime/${anime.id}`}>
-          <div className="relative card-image">
+        {imageUrl && !imageError && (
+          <img src={imageUrl} alt="" className="poster-glow h-full w-full rounded-sm object-cover" />
+        )}
+        <div className="relative overflow-hidden rounded-sm bg-[#111113] shadow-[0_22px_50px_rgba(0,0,0,0.42)]">
+          <Link href={`/anime/${anime.id}`}>
+            <div className="relative card-image">
             {imageError || !imageUrl ? (
               <div className="w-full h-full flex items-center justify-center bg-[#0d0f1a]">
                 <div className="text-center p-4">
@@ -74,7 +77,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
                   src={imageUrl}
                   alt={title}
                   className={cn(
-                    'w-full h-full object-cover transition-all duration-300 group-hover:scale-105',
+                    'w-full h-full object-cover transition-all duration-500 ease-in-out group-hover:scale-110 group-hover:saturate-125',
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   )}
                   loading="lazy"
@@ -84,11 +87,11 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
               </>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
             {anime.status && (
               <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5">
-                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/65 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90 ring-1 ring-white/10 backdrop-blur">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1.5 sm:px-2 py-0.5 rounded-sm text-[0.45rem] sm:text-[0.55rem] font-medium text-white/90 ring-1 ring-white/10 backdrop-blur">
                   <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   {getStatusBadge(anime.status)}
                 </span>
@@ -97,7 +100,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
 
             {isInCollection && (
               <div className="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5">
-                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-success/90 px-1.5 sm:px-2 py-0.5 rounded-full text-[0.45rem] sm:text-[0.55rem] font-medium text-white shadow-lg shadow-black/20">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 bg-green-500/90 px-1.5 sm:px-2 py-0.5 rounded-sm text-[0.45rem] sm:text-[0.55rem] font-medium text-white shadow-lg shadow-black/20">
                   <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                   В коллекции
                 </span>
@@ -107,7 +110,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             {score > 0 && (
               <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5">
                 <span className={cn(
-                  'inline-flex items-center gap-0.5 sm:gap-1 bg-black/65 px-1 sm:px-1.5 py-0.5 rounded-md text-[0.5rem] sm:text-[0.6rem] font-bold ring-1 ring-white/10 backdrop-blur',
+                  'inline-flex items-center gap-0.5 sm:gap-1 bg-black/70 px-1 sm:px-1.5 py-0.5 rounded-sm text-[0.5rem] sm:text-[0.6rem] font-bold ring-1 ring-white/10 backdrop-blur',
                   getScoreColor(score)
                 )}>
                   <Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-current" />
@@ -115,30 +118,24 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
                 </span>
               </div>
             )}
-          </div>
-        </Link>
+            </div>
+          </Link>
 
-        <div className="p-2.5 sm:p-3.5 space-y-1.5 sm:space-y-2">
+          <div className="space-y-1.5 bg-[#111113] p-2.5 sm:space-y-2 sm:p-3">
           <Link href={`/anime/${anime.id}`}>
-            <h3 className="text-[0.65rem] sm:text-sm font-semibold leading-snug line-clamp-2 transition-colors duration-150 group-hover:text-primary">
+            <h3 className="line-clamp-2 h-10 text-[0.72rem] font-medium leading-snug opacity-90 transition-colors duration-150 group-hover:text-primary sm:text-sm">
               {title}
             </h3>
           </Link>
 
-          <div className="flex items-center gap-2 text-[0.55rem] sm:text-[0.65rem] text-muted-foreground flex-wrap">
+          <div className="flex items-center justify-between gap-2 text-[0.55rem] text-white/55 sm:text-[0.65rem]">
             {anime.format && (
-              <span className="px-1.5 py-0.5 rounded bg-muted/70 font-medium">
+              <span className="font-medium">
                 {getFormatText(anime.format)}
               </span>
             )}
-            {anime.episodes && (
-              <span className="hidden sm:flex items-center gap-1">
-                <PlayCircle className="h-3 w-3" />
-                {anime.episodes} эп.
-              </span>
-            )}
             {year && (
-              <span className="hidden sm:flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {year}
               </span>
@@ -149,7 +146,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             <div className="flex flex-wrap gap-1">
               {anime.genres.slice(0, 3).map((genre) => (
                 <Link key={genre} href={`/genre/${encodeURIComponent(genre)}`}>
-                  <span className="text-[0.45rem] sm:text-[0.55rem] font-medium px-1 sm:px-1.5 py-0.5 rounded-full bg-muted/70 text-muted-foreground/70 hover:text-primary transition-colors duration-150">
+                  <span className="text-[0.45rem] sm:text-[0.55rem] font-medium px-1 sm:px-1.5 py-0.5 bg-[#232326] text-white/50 hover:text-primary transition-colors duration-150">
                     {translateGenre(genre)}
                   </span>
                 </Link>
@@ -167,10 +164,10 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
               size="sm"
               variant={isInCollection ? "outline" : "default"}
               className={cn(
-                "flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 text-[0.55rem] sm:text-[0.65rem]",
+                "flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 rounded-sm text-[0.55rem] sm:text-[0.65rem]",
                 isInCollection
-                  ? "border-success/30 text-success hover:bg-success/10"
-                  : "shadow-[0_10px_30px_rgba(200,143,90,0.2)]"
+                  ? "border-green-400/30 text-green-400 hover:bg-green-400/10"
+                  : "bg-[#2f3236] text-white hover:bg-primary"
               )}
               onClick={(e) => {
                 e.preventDefault()
@@ -188,7 +185,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             <Button
               size="sm"
               variant="outline"
-              className="h-6 w-6 sm:h-7 sm:w-7 !p-0 border-primary/20 hover:border-primary/40"
+              className="h-6 w-6 sm:h-7 sm:w-7 !p-0 rounded-sm border-white/15 bg-[#1e1e20] hover:border-primary/50"
               onClick={(e) => {
                 e.preventDefault()
                 setIsShareDialogOpen(true)
@@ -196,6 +193,45 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             >
               <Share2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </Button>
+          </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute -left-6 -top-5 z-40 hidden w-80 overflow-hidden bg-[#1a1a1d] opacity-0 shadow-3xl drop-shadow-2xl transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 lg:block">
+          <div className="relative h-36 w-full overflow-hidden">
+            {imageUrl && !imageError && (
+              <img src={getProxiedImageUrl(anime.bannerImage || rawImageUrl)} alt="" className="h-full w-full object-cover brightness-75" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1d] via-transparent to-transparent" />
+          </div>
+          <div className="space-y-2 p-2">
+            <div
+              className="line-clamp-2 border-l-[3px] border-primary px-2 py-1 text-sm font-medium tracking-wide"
+              style={{ backgroundImage: 'linear-gradient(to right, rgba(239,68,68,0.22), rgba(0,0,0,0))' }}
+            >
+              {title}
+            </div>
+            <div className="mx-2 flex items-center justify-between gap-x-2 border-b border-[#545454] pb-1 text-xs text-gray-300">
+              <p>{anime.format ? getFormatText(anime.format) : 'TV'}</p>
+              <div className="h-5 w-px bg-[#333]" />
+              <p>{anime.episodes || '?'} эп.</p>
+              {score > 0 && (
+                <>
+                  <div className="h-5 w-px bg-[#333]" />
+                  <p className="flex items-center gap-x-1"><Star className="h-3.5 w-3.5" /> {(score / 10).toFixed(1)}</p>
+                </>
+              )}
+            </div>
+            {anime.genres && anime.genres.length > 0 && (
+              <div className="mx-2 line-clamp-1 border-b border-[#545454] pb-1 text-xs text-gray-300">
+                {anime.genres.slice(0, 5).map(translateGenre).join(', ')}
+              </div>
+            )}
+            <div className="flex gap-2 px-2 pb-2">
+              <Link href={`/anime/${anime.id}`} className="bg-[#2f3236] px-2 py-1 text-xs transition-colors hover:bg-primary">
+                Подробнее
+              </Link>
+            </div>
           </div>
         </div>
       </motion.div>

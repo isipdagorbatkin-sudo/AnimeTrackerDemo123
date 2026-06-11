@@ -439,7 +439,7 @@ export default function ProfileSettingsPage() {
                 style={{
                   backgroundImage: bannerUrl
                     ? `linear-gradient(180deg, rgba(9,10,15,0.1), rgba(9,10,15,0.88)), url(${getProxiedImageUrl(bannerUrl)})`
-                    : 'linear-gradient(135deg, rgba(200,143,90,0.35), rgba(112,143,128,0.16))',
+                    : 'linear-gradient(135deg, rgba(239,68,68,0.34), rgba(90,94,103,0.22))',
                 }}
               />
               <CardContent className="space-y-4 p-5">

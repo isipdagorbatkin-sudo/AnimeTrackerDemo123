@@ -474,36 +474,43 @@ export default function HomePage() {
   }
 
   return (
-    <div>
-      <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-8">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.12),transparent_36%),linear-gradient(225deg,rgba(112,143,128,0.1),transparent_44%)]" />
+    <div className="font-[var(--font-display)]">
+      <section className="relative min-h-[58svh] overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="zenshin-wordmark absolute -top-24 left-1/2 w-max -translate-x-1/2 text-[18vw] font-bold leading-none">
+            ZENSHIN ZENSHIN
+          </div>
+          <div className="zenshin-wordmark absolute top-1/2 left-1/2 w-max -translate-x-1/2 -translate-y-1/2 text-[20vw] font-bold leading-none">
+            ANIMETRACKER
+          </div>
+          <div className="zenshin-wordmark absolute -bottom-20 left-1/2 w-max -translate-x-1/2 text-[18vw] font-bold leading-none">
+            七転び八起き
+          </div>
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </div>
-        <div className="max-w-7xl mx-auto relative">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+        <div className="relative mx-auto flex min-h-[50svh] max-w-7xl items-center">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <motion.div
               className="max-w-3xl"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground-secondary">
+              <div className="inline-flex items-center gap-2 border border-white/20 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70 backdrop-blur">
                 Сезонная медиатека
               </div>
-              <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.02] text-foreground">
-                Аниме-трекер, который выглядит{' '}
-                <span className="text-primary">как личная медиатека</span>
+              <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-[1.02] tracking-tight text-white sm:text-5xl lg:text-7xl">
+                AnimeTracker
               </h1>
-              <p className="text-foreground-secondary text-base sm:text-lg mt-5 leading-relaxed max-w-2xl">
-                Быстро находи тайтлы, веди коллекцию, отмечай прогресс и переключайся между сезонами без визуального шума.
+              <p className="mt-5 max-w-2xl text-sm leading-relaxed tracking-wide text-white/70 sm:text-base">
+                Личная аниме-полка с каталогом, коллекцией, профилем и плеером. Структура осталась прежней, а оболочка стала ближе к zenshin.
               </p>
               <div className="flex items-center gap-3 mt-7">
-                <Button size="lg" className="gap-2 shadow-[0_18px_40px_rgba(200,143,90,0.26)]" onClick={() => document.getElementById('anime-catalog')?.scrollIntoView({ behavior: 'smooth' })}>
+                <Button size="lg" className="gap-2 rounded-sm bg-primary shadow-[0_18px_40px_rgba(239,68,68,0.24)] hover:bg-red-500" onClick={() => document.getElementById('anime-catalog')?.scrollIntoView({ behavior: 'smooth' })}>
                   <Star className="h-4 w-4" />
                   Открыть каталог
                 </Button>
-                <Button size="lg" variant="outline" className="gap-2 border-primary/30 hover:border-primary/50 hover:bg-primary/5" onClick={() => router.push('/collection')}>
+                <Button size="lg" variant="outline" className="gap-2 rounded-sm border-white/20 bg-black/30 hover:border-primary/50 hover:bg-primary/10" onClick={() => router.push('/collection')}>
                   <Eye className="h-4 w-4" />
                   Моя коллекция
                 </Button>
@@ -517,7 +524,7 @@ export default function HomePage() {
       <section className="px-4 sm:px-6 lg:px-8 mb-8" id="anime-catalog">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            className="glass rounded-2xl p-4 sm:p-5"
+            className="zenshin-panel rounded-sm p-4 sm:p-5"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.18 }}
@@ -530,7 +537,7 @@ export default function HomePage() {
                   placeholder="Поиск аниме по названию..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-11 bg-background/60 border-border/70 text-sm focus-visible:ring-primary/40"
+                  className="pl-10 h-11 rounded-sm bg-[#111113]/80 border-white/15 text-sm focus-visible:ring-primary/40"
                 />
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -543,7 +550,7 @@ export default function HomePage() {
                       setCurrentPage(1)
                     }}
                     disabled={activeTab === 'guess'}
-                    className="h-11 w-full appearance-none rounded-xl border border-primary/25 bg-background/60 pl-9 pr-9 text-sm text-foreground outline-none transition-colors hover:border-primary/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 w-full appearance-none rounded-sm border border-white/15 bg-[#111113]/80 pl-9 pr-9 text-sm text-foreground outline-none transition-colors hover:border-primary/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Сортировка"
                   >
                     {sortOptions.map((option) => (
@@ -559,7 +566,7 @@ export default function HomePage() {
                   variant="outline"
                   onClick={() => setIsGenreDialogOpen(true)}
                   className={cn(
-                    'h-11 gap-2 text-sm border-primary/25 hover:border-primary/50 hover:bg-primary/5',
+                    'h-11 gap-2 rounded-sm text-sm border-white/15 bg-[#111113]/80 hover:border-primary/50 hover:bg-primary/10',
                     selectedGenre && "border-primary/30 bg-primary/5 text-primary"
                   )}
                 >
@@ -571,7 +578,7 @@ export default function HomePage() {
                     variant="outline"
                     size="lg"
                     onClick={() => { setSelectedGenre(''); setSearchQuery('') }}
-                    className="h-11 border-primary/20 hover:border-primary/40"
+                    className="h-11 rounded-sm border-white/15 hover:border-primary/40"
                   >
                     ✕
                   </Button>
@@ -654,7 +661,7 @@ export default function HomePage() {
                             className={cn(
                               'text-left rounded-2xl border p-4 transition-all',
                               active
-                                ? 'border-primary/50 bg-primary/10 shadow-[0_18px_45px_rgba(200,143,90,0.12)]'
+                                ? 'border-primary/50 bg-primary/10 shadow-[0_18px_45px_rgba(239,68,68,0.16)]'
                                 : 'border-border bg-muted/30 hover:border-primary/25 hover:bg-muted/50'
                             )}
                           >

@@ -295,7 +295,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       )}
 
       <section className="relative overflow-hidden py-16 px-4">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.24),transparent_42%),linear-gradient(225deg,rgba(112,143,128,0.14),transparent_45%)] animate-gradient-x" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(239,68,68,0.18),transparent_42%),linear-gradient(225deg,rgba(90,94,103,0.18),transparent_45%)] animate-gradient-x" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-20" />
         <div className="container mx-auto relative z-10">
           <Button variant="ghost" onClick={() => router.back()} className="mb-6">

@@ -133,7 +133,7 @@ export default function StatisticsPage() {
     <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <div className="max-w-7xl mx-auto">
         <section className="relative overflow-hidden rounded-3xl border border-border bg-card/65 p-6 sm:p-8 shadow-2xl shadow-black/30">
-          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,rgba(200,143,90,0.13),transparent_34%),linear-gradient(225deg,rgba(112,143,128,0.1),transparent_44%)]" />
+          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,rgba(239,68,68,0.14),transparent_34%),linear-gradient(225deg,rgba(90,94,103,0.16),transparent_44%)]" />
           <div className="relative">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/20">

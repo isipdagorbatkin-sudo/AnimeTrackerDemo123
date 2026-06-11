@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Manrope, Montserrat } from 'next/font/google'
+import { Inter, Space_Mono } from 'next/font/google'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import { Navigation } from '@/components/layout/Navigation'
@@ -7,15 +7,15 @@ import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollToTop } from '@/components/ui/ScrollToTop'
 import { ScrollMemory } from '@/components/ui/ScrollMemory'
-import { SakuraAnimation } from '@/components/effects/SakuraAnimation'
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ['latin', 'cyrillic'],
   variable: '--font-sans',
 })
 
-const montserrat = Montserrat({
-  subsets: ['latin', 'cyrillic'],
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
   variable: '--font-display',
 })
 
@@ -46,7 +46,7 @@ export default async function RootLayout({
 
   return (
     <html lang="ru" className="dark">
-      <body className={`${manrope.variable} ${montserrat.variable} antialiased`}>
+      <body className={`${inter.variable} ${spaceMono.variable} antialiased`}>
         {showNavigation ? (
           <>
             <Navigation
@@ -65,7 +65,6 @@ export default async function RootLayout({
             {children}
           </main>
         )}
-        <SakuraAnimation />
         <ScrollMemory />
         <ScrollToTop />
         <Analytics />

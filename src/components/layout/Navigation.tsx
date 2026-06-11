@@ -41,30 +41,30 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 hidden md:flex flex-col h-screen bg-sidebar/88 border-r border-sidebar-border backdrop-blur-xl shadow-2xl shadow-black/30 transition-all duration-300',
+        'fixed left-0 top-0 z-40 hidden md:flex flex-col h-screen bg-[#111113]/95 border-r border-[#343438] backdrop-blur-xl shadow-[0_35px_60px_rgba(0,0,0,0.55)] transition-all duration-300 font-[var(--font-display)]',
         collapsed ? 'w-[68px]' : 'w-60'
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(200,143,90,0.1),transparent_42%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(239,68,68,0.08),transparent_42%)]" />
       {/* Logo */}
       <div className={cn(
         'relative z-10 flex items-center border-b border-sidebar-border h-14',
         collapsed ? 'justify-center' : 'px-4'
       )}>
         {collapsed ? (
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+          <div className="h-8 w-8 rounded-sm bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
             <Flame className="h-4 w-4 text-white" />
           </div>
         ) : (
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
+            <div className="h-8 w-8 rounded-sm bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
               <Flame className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-sidebar-foreground tracking-tight">
+              <div className="text-sm font-bold text-sidebar-foreground tracking-tight uppercase">
                   AnimeTracker
                 </div>
-                <div className="text-[0.55rem] font-semibold text-sidebar-accent-foreground/70 uppercase tracking-[0.3em]">
+                <div className="text-[0.55rem] font-semibold text-primary/80 uppercase tracking-[0.22em]">
                   Трекинг аниме
                 </div>
             </div>
@@ -77,8 +77,8 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
         onClick={() => setCollapsed(!collapsed)}
         className={cn(
           'absolute -right-3 top-[2.75rem] z-50 hidden md:flex items-center justify-center w-5 h-5 rounded-full',
-          'border border-sidebar-border bg-sidebar text-sidebar-muted-foreground shadow-lg shadow-black/30',
-          'hover:text-sidebar-foreground hover:border-sidebar-ring hover:bg-sidebar-accent',
+          'border border-[#343438] bg-[#111113] text-muted-foreground shadow-lg shadow-black/30',
+          'hover:text-white hover:border-primary hover:bg-[#232326]',
           'transition-all duration-200',
           collapsed && 'rotate-180'
         )}
@@ -105,15 +105,15 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 w-full',
+                'group relative flex items-center gap-3 rounded-sm text-sm font-medium transition-all duration-150 w-full',
                 collapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-3 h-9',
                 isActive
-                  ? 'bg-primary/15 text-sidebar-foreground shadow-[0_0_20px_rgba(200,143,90,0.16)]'
-                  : 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent'
+                  ? 'bg-primary/15 text-white shadow-[0_0_22px_rgba(239,68,68,0.18)]'
+                  : 'text-muted-foreground hover:text-white hover:bg-[#232326]'
               )}
             >
               <span className={cn(
-                'absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary opacity-0 transition-opacity duration-150',
+                'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 bg-primary opacity-0 transition-opacity duration-150',
                 isActive && 'opacity-100'
               )} />
               <Icon className={cn(

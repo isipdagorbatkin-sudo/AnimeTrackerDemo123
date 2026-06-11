@@ -167,7 +167,7 @@ export default function SearchPage() {
       <section className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(200,143,90,0.1),transparent_38%),linear-gradient(225deg,rgba(112,143,128,0.08),transparent_48%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(239,68,68,0.12),transparent_38%),linear-gradient(225deg,rgba(90,94,103,0.12),transparent_48%)]" />
         </div>
 
         <div className="relative max-w-7xl mx-auto">
