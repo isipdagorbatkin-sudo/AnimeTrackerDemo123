@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Star, Trash2, Edit, Loader2, BookOpen, Sparkles } from 'lucide-react'
+import { Loader2, BookOpen, Sparkles } from 'lucide-react'
 import { EditCollectionDialog } from '@/components/anime/EditCollectionDialog'
-import { AnimeDisplay } from '@/components/anime/AnimeDisplay'
+import { CollectionAnimeCard } from '@/components/anime/CollectionAnimeCard'
 import { getAnimeById } from '@/lib/anilist/client'
 import { fetchRussianText, getRussianText } from '@/lib/russian-cache'
 import { normalizeAnimeTitleKey } from '@/lib/anime-text'
@@ -234,56 +231,16 @@ export default function CollectionPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-4 xl:grid-cols-2">
               {filteredCollection.map((item) => (
-                <Card key={item.id} className="glass hover:scale-[1.01] transition-all duration-300">
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <AnimeDisplay animeId={item.anime_id} />
-                      </div>
-                      <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm`}>
-                        {getStatusText(item.status)}
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {item.rating && (
-                        <div className="flex items-center gap-2">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">{item.rating}/100</span>
-                        </div>
-                      )}
-                      {item.review && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {item.review}
-                        </p>
-                      )}
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Изменить
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Удалить
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CollectionAnimeCard
+                  key={item.id}
+                  item={item}
+                  getStatusText={getStatusText}
+                  getStatusColor={getStatusColor}
+                  onEdit={(nextItem) => setEditingItem(nextItem as AnimeCollection)}
+                  onDelete={handleDelete}
+                />
               ))}
             </div>
           )}

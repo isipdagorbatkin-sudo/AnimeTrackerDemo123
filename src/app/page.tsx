@@ -510,20 +510,6 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            <motion.div
-              className="glass max-w-sm rounded-2xl p-5 text-sm leading-relaxed text-foreground-secondary lg:min-w-[320px]"
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="mb-3 flex items-center gap-2 text-foreground">
-                <SlidersHorizontal className="h-4 w-4 text-primary" />
-                <span className="font-semibold">Каталог без лишнего шума</span>
-              </div>
-              <p>
-                Поиск, жанры, сортировка и квиз находятся рядом, а коллекция хранит прогресс без выдуманных показателей.
-              </p>
-            </motion.div>
           </div>
         </div>
       </section>

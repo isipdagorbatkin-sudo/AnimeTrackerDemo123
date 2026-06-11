@@ -84,7 +84,7 @@ export function AnimeFramesStrip({ title, fallbackTitles, idMal, year, episodes 
         {frames.map((frame, index) => (
           <div
             key={frame}
-            className="group relative h-28 w-48 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted shadow-lg shadow-black/20 sm:h-32 sm:w-56"
+            className="group relative h-36 w-[15.5rem] shrink-0 overflow-hidden rounded-2xl border border-border bg-muted shadow-lg shadow-black/20 sm:h-40 sm:w-72"
           >
             <img
               src={frame}

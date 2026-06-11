@@ -19,7 +19,7 @@ import { getAnimeById, getCoverImage, AniListAnime } from '@/lib/anilist/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian-cache'
 import { normalizeAnimeTitleKey } from '@/lib/anime-text'
-import { translateGenre } from '@/lib/genres'
+import { CollectionAnimeCard } from '@/components/anime/CollectionAnimeCard'
 import Link from 'next/link'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
@@ -645,21 +645,6 @@ function CollectionList({
   getStatusText: (s: string) => string
   getStatusColor: (s: string) => string
 }) {
-  const [animeCache, setAnimeCache] = useState<Record<number, AniListAnime | null>>({})
-
-  useEffect(() => {
-    if (!Array.isArray(items)) return
-    const ids = items.map(i => i.anime_id)
-    ids.forEach(id => {
-      if (!animeCache[id]) {
-        getAnimeById(id).then(data => {
-          setAnimeCache(prev => ({ ...prev, [id]: data }))
-          if (data?.idMal) fetchRussianText(data.idMal, data.title?.english, data.title?.romaji, data.title?.native)
-        })
-      }
-    })
-  }, [items.length])
-
   if (items.length === 0) {
     return (
       <div className="text-center py-20">
@@ -670,63 +655,14 @@ function CollectionList({
 
   return (
     <div className="grid gap-4">
-      {items.map((item) => {
-        const anime = animeCache[item.anime_id]
-        const ru = anime?.idMal ? getRussianText(anime.idMal)?.title : ''
-        const title = ru || anime?.title?.romaji || anime?.title?.english || anime?.title?.native || 'Загрузка...'
-        const imageUrl = anime ? getProxiedImageUrl(getCoverImage(anime)) : null
-
-        return (
-          <Card key={item.id} className="glass">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  {imageUrl && (
-                    <img src={imageUrl} alt={title} className="h-16 w-12 rounded object-cover shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <Link href={`/anime/${item.anime_id}`} className="font-medium truncate hover:text-primary transition-colors">
-                      {title}
-                    </Link>
-                    <CardDescription>
-                      Добавлено: {new Date(item.added_at).toLocaleDateString('ru-RU')}
-                    </CardDescription>
-                    {anime?.genres && anime.genres.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {anime.genres.slice(0, 3).map((genre) => (
-                          <Link key={genre} href={`/genre/${encodeURIComponent(genre)}`}>
-                            <Badge variant="secondary" className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground">
-                              {translateGenre(genre)}
-                            </Badge>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Badge className={`${getStatusColor(item.status)} border backdrop-blur-sm shrink-0`}>
-                  {getStatusText(item.status)}
-                </Badge>
-              </div>
-            </CardHeader>
-            {(item.rating || item.review) && (
-              <CardContent>
-                <div className="space-y-2">
-                  {item.rating && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Оценка:</span>
-                      <span className="font-bold">{item.rating}/100</span>
-                    </div>
-                  )}
-                  {item.review && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{item.review}</p>
-                  )}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )
-      })}
+      {items.map((item) => (
+        <CollectionAnimeCard
+          key={item.id}
+          item={item}
+          getStatusText={getStatusText}
+          getStatusColor={getStatusColor}
+        />
+      ))}
     </div>
   )
 }

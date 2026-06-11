@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { BookOpen, MessageSquare, TrendingUp, Sparkles, Flame } from 'lucide-react'
-import { AnimeDisplayServer } from '@/components/anime/AnimeDisplayServer'
+import { CollectionAnimeCard } from '@/components/anime/CollectionAnimeCard'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -144,24 +144,13 @@ export default async function DashboardPage() {
             </div>
             <div>
               {recentAnime && recentAnime.length > 0 ? (
-                <div className="space-y-3">
-                  {recentAnime.map((item, i) => (
-                    <div key={item.id} className="bg-muted/60 border border-border rounded-xl p-4 transition-colors hover:border-primary/25">
-                      <AnimeDisplayServer animeId={item.anime_id} />
-                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-border">
-                        <span className="status">
-                          {item.status === 'watching' ? 'Смотрю' :
-                           item.status === 'completed' ? 'Просмотрено' :
-                           item.status === 'plan_to_watch' ? 'В планах' : 'Брошено'}
-                        </span>
-                        {item.rating && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-foreground-secondary/60">Оценка:</span>
-                            <span className="text-sm font-semibold text-primary">{item.rating}/100</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {recentAnime.map((item) => (
+                    <CollectionAnimeCard
+                      key={item.id}
+                      item={item}
+                      compact
+                    />
                   ))}
                 </div>
               ) : (

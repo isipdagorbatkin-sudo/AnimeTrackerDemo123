@@ -6,6 +6,7 @@ import { Navigation } from '@/components/layout/Navigation'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollToTop } from '@/components/ui/ScrollToTop'
+import { ScrollMemory } from '@/components/ui/ScrollMemory'
 import { SakuraAnimation } from '@/components/effects/SakuraAnimation'
 
 const manrope = Manrope({
@@ -65,6 +66,7 @@ export default async function RootLayout({
           </main>
         )}
         <SakuraAnimation />
+        <ScrollMemory />
         <ScrollToTop />
         <Analytics />
       </body>
