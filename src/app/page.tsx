@@ -14,6 +14,7 @@ import {
   getMovies,
   getAnimeByGenre,
   getRandomAnime,
+  getCoverImage,
 } from '@/lib/anilist/client'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -475,35 +476,33 @@ export default function HomePage() {
 
   return (
     <div className="font-[var(--font-display)]">
-      <section className="relative min-h-[58svh] overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <section className="relative min-h-[calc(100svh-3rem)] overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <div className="pointer-events-none absolute inset-0">
-          <div className="zenshin-wordmark absolute -top-24 left-1/2 w-max -translate-x-1/2 text-[18vw] font-bold leading-none">
-            ZENSHIN ZENSHIN
+          <div className="zenshin-wordmark absolute -top-28 left-1/2 w-max -translate-x-1/2 text-[20vw] font-bold leading-none">
+            全身 全身 全身
           </div>
-          <div className="zenshin-wordmark absolute top-1/2 left-1/2 w-max -translate-x-1/2 -translate-y-1/2 text-[20vw] font-bold leading-none">
-            ANIMETRACKER
+          <div className="zenshin-wordmark absolute top-[42%] left-1/2 w-max -translate-x-1/2 -translate-y-1/2 text-[22vw] font-bold leading-none">
+            ZENSHIN
           </div>
-          <div className="zenshin-wordmark absolute -bottom-20 left-1/2 w-max -translate-x-1/2 text-[18vw] font-bold leading-none">
+          <div className="zenshin-wordmark absolute -bottom-24 left-1/2 w-max -translate-x-1/2 text-[19vw] font-bold leading-none">
             七転び八起き
           </div>
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </div>
-        <div className="relative mx-auto flex min-h-[50svh] max-w-7xl items-center">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative mx-auto flex min-h-[calc(100svh-6rem)] max-w-7xl items-center justify-center">
+          <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,1fr)_430px]">
             <motion.div
-              className="max-w-3xl"
+              className="mx-auto max-w-3xl lg:mx-0 lg:pl-12"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="inline-flex items-center gap-2 border border-white/20 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70 backdrop-blur">
-                Сезонная медиатека
-              </div>
-              <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-[1.02] tracking-tight text-white sm:text-5xl lg:text-7xl">
-                AnimeTracker
+              <h1 className="text-5xl font-bold leading-none tracking-tight text-white drop-shadow-xl sm:text-7xl">
+                zenshin.
+                <span className="ml-4 align-middle text-4xl text-[#8b5cf6] sm:text-6xl">全身</span>
               </h1>
-              <p className="mt-5 max-w-2xl text-sm leading-relaxed tracking-wide text-white/70 sm:text-base">
-                Личная аниме-полка с каталогом, коллекцией, профилем и плеером. Структура осталась прежней, а оболочка стала ближе к zenshin.
+              <p className="mt-8 max-w-2xl text-base font-bold leading-relaxed tracking-wide text-white/85 sm:text-lg">
+                Смотри, собирай и открывай аниме в личной медиатеке без лишней оболочки: тёмный интерфейс, быстрый каталог и твоя коллекция под рукой.
               </p>
               <div className="flex items-center gap-3 mt-7">
                 <Button size="lg" className="gap-2 rounded-sm bg-primary shadow-[0_18px_40px_rgba(239,68,68,0.24)] hover:bg-red-500" onClick={() => document.getElementById('anime-catalog')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -517,6 +516,39 @@ export default function HomePage() {
               </div>
             </motion.div>
 
+            <motion.div
+              className="hidden h-[520px] grid-cols-2 gap-5 overflow-hidden lg:grid"
+              initial={{ opacity: 0, x: 28 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="flex translate-y-8 flex-col gap-5">
+                {animeList.slice(0, 3).map((anime) => {
+                  const image = getProxiedImageUrl(getCoverImage(anime))
+                  return (
+                    <Link key={`hero-a-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-48 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_25px_45px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:scale-105">
+                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                        {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+              <div className="flex flex-col gap-5">
+                {animeList.slice(3, 6).map((anime) => {
+                  const image = getProxiedImageUrl(getCoverImage(anime))
+                  return (
+                    <Link key={`hero-b-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-56 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_25px_45px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:scale-105">
+                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                        {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>

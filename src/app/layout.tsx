@@ -53,7 +53,7 @@ export default async function RootLayout({
               username={userData?.username}
               avatarUrl={userData?.avatar_url}
             />
-            <main className="min-h-screen md:pl-60 pb-16 md:pb-0 transition-all duration-200">
+            <main className="min-h-screen pt-12 pb-16 md:pb-0 transition-all duration-200">
               <div className="page-enter">
                 {children}
               </div>

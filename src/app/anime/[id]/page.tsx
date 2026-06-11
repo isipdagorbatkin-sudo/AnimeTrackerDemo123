@@ -173,6 +173,7 @@ export default function AnimePage() {
   }
 
   const imageUrl = getProxiedImageUrl(getCoverImage(anime))
+  const bannerUrl = getProxiedImageUrl(anime.bannerImage || getCoverImage(anime))
   const seasonRelations = relations.filter((rel) =>
     ['PREQUEL', 'SEQUEL', 'PARENT', 'SIDE_STORY', 'ALTERNATIVE', 'SUMMARY'].includes(rel.relationType)
   )
@@ -194,10 +195,122 @@ export default function AnimePage() {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="mx-auto px-4 py-8 relative w-full max-w-7xl">
+      <section className="relative border-b border-white/10">
+        <div className="absolute inset-x-0 top-0 h-72 overflow-hidden">
+          {bannerUrl ? (
+            <>
+              <img
+                src={bannerUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover opacity-55 blur-3xl brightness-50 saturate-150"
+              />
+              <img
+                src={bannerUrl}
+                alt=""
+                className="relative h-full w-full object-cover brightness-[0.42] saturate-125"
+              />
+            </>
+          ) : (
+            <div className="h-full w-full bg-[radial-gradient(circle_at_25%_25%,rgba(255,101,101,0.22),transparent_32%),linear-gradient(135deg,#111,#050505)]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-background" />
+        </div>
+
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-8 pt-36 sm:px-6 lg:flex-row lg:items-end lg:gap-8 lg:pt-44">
+          <div className="w-44 shrink-0 sm:w-56 lg:w-72">
+            <div className="relative overflow-hidden rounded-sm border border-white/10 bg-black shadow-2xl shadow-black/60 lg:-mb-16">
+              {!imageError && imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="aspect-[2/3] w-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="flex aspect-[2/3] w-full items-center justify-center bg-muted">
+                  <ImageIcon className="h-14 w-14 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pb-1 font-[var(--font-display)]">
+            <Link href="/" className="mb-4 inline-flex text-xs uppercase tracking-[0.22em] text-white/45 transition-colors hover:text-primary">
+              Назад
+            </Link>
+            <h1 className="max-w-4xl break-words text-3xl font-medium leading-tight text-white sm:text-5xl lg:text-6xl">
+              {title}
+            </h1>
+            {nativeTitle && (
+              <p className="mt-2 break-words text-sm text-white/45 sm:text-base">{nativeTitle}</p>
+            )}
+
+            <div className="my-5 h-px w-full max-w-3xl bg-white/15" />
+
+            <div className="flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 text-xs uppercase tracking-[0.16em] text-white/55">
+              <span>{getFormatText(anime.format)}</span>
+              {anime.episodes && <><span className="text-white/20">/</span><span>{anime.episodes} эп.</span></>}
+              <span className="text-white/20">/</span>
+              <span>{getStatusText(anime.status)}</span>
+              {year && <><span className="text-white/20">/</span><span>{year}</span></>}
+              {score > 0 && <><span className="text-white/20">/</span><span>{(score / 10).toFixed(1)}</span></>}
+              {anime.duration && <><span className="text-white/20">/</span><span>{anime.duration} мин.</span></>}
+            </div>
+
+            {description && (
+              <div className="mt-5 max-w-4xl text-sm leading-7 text-white/60">
+                {visibleDescription}
+                {shouldCollapseDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFullDescription((value) => !value)}
+                    className="ml-2 inline text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline"
+                  >
+                    {showFullDescription ? 'Свернуть' : 'Показать полностью'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {anime.genres && anime.genres.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {anime.genres.map((genre) => (
+                  <Link
+                    key={genre}
+                    href={`/genre/${encodeURIComponent(genre)}`}
+                    className="border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs uppercase tracking-[0.16em] text-white/55 transition-colors hover:border-primary/50 hover:text-primary"
+                  >
+                    {translateGenre(genre)}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              {isInCollection ? (
+                <Button size="sm" variant="outline" className="h-10 rounded-sm border-white/15 bg-white/[0.03]" disabled>
+                  <Check className="mr-2 h-4 w-4 text-green-400" />
+                  <span className="text-green-400">В коллекции</span>
+                </Button>
+              ) : (
+                <Button size="sm" className="h-10 rounded-sm" onClick={() => setIsAddDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  В коллекцию
+                </Button>
+              )}
+              <Button size="sm" variant="outline" className="h-10 rounded-sm border-white/15 bg-white/[0.03]" onClick={() => setIsShareDialogOpen(true)}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Поделиться
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto px-4 py-8 lg:pt-24 relative w-full max-w-7xl">
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden glass">
+            <Card className="hidden">
               <div className="mx-auto max-w-[200px] sm:max-w-[250px]">
                 {!imageError && imageUrl ? (
                   <img
@@ -260,7 +373,7 @@ export default function AnimePage() {
           </div>
 
           <div className="lg:col-span-2 space-y-6 min-w-0">
-            <div>
+            <div className="hidden">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 inline-block">
                 ← Вернуться на главную
               </Link>
@@ -272,7 +385,7 @@ export default function AnimePage() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="hidden">
               <Badge className={`${getStatusColor(anime.status)} border backdrop-blur-sm`}>
                 {getStatusText(anime.status)}
               </Badge>
@@ -344,7 +457,7 @@ export default function AnimePage() {
             </div>
 
             {anime.genres && anime.genres.length > 0 && (
-              <div>
+              <div className="hidden">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   Жанры
@@ -362,7 +475,7 @@ export default function AnimePage() {
             )}
 
             {description && (
-              <div>
+              <div className="hidden">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
                   Описание
