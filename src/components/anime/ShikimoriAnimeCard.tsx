@@ -42,7 +42,7 @@ export function ShikimoriAnimeCard({ anime, isInCollection, onAddToCollection }:
 
   return (
     <>
-      <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-[0_18px_60px_rgba(8,8,20,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_24px_80px_rgba(168,85,247,0.2)]">
+      <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 shadow-[0_12px_28px_rgba(8,8,20,0.34)] transition-colors duration-150 hover:border-primary/40">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.2),transparent_55%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <Link href={`/anime/${urlId}`}>
           <div className="relative card-image">
@@ -61,7 +61,7 @@ export function ShikimoriAnimeCard({ anime, isInCollection, onAddToCollection }:
                   alt={title}
                   style={{ objectFit: 'scale-down' }}
                   className={cn(
-                    'w-full h-full transition-all duration-300 group-hover:scale-105',
+                    'w-full h-full transition-opacity duration-150 group-hover:opacity-90',
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   )}
                   loading="lazy"

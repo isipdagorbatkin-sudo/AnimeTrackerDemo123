@@ -479,14 +479,14 @@ export default function HomePage() {
     <div className="font-[var(--font-display)]">
       <section className="relative min-h-[calc(100svh-3rem)] overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <div className="pointer-events-none absolute inset-0">
-          <div className="zenshin-wordmark absolute -top-28 left-1/2 w-max -translate-x-1/2 text-[20vw] font-bold leading-none">
-            全身 全身 全身
+          <div className="anime-wordmark absolute -top-28 left-1/2 w-max -translate-x-1/2 text-[20vw] font-bold leading-none">
+            Anime Anime Anime
           </div>
-          <div className="zenshin-wordmark absolute top-[42%] left-1/2 w-max -translate-x-1/2 -translate-y-1/2 text-[22vw] font-bold leading-none">
-            ZENSHIN
+          <div className="anime-wordmark absolute top-[42%] left-1/2 w-max -translate-x-1/2 -translate-y-1/2 text-[22vw] font-bold leading-none">
+            AnimeTracker
           </div>
-          <div className="zenshin-wordmark absolute -bottom-24 left-1/2 w-max -translate-x-1/2 text-[19vw] font-bold leading-none">
-            七転び八起き
+          <div className="anime-wordmark absolute -bottom-24 left-1/2 w-max -translate-x-1/2 text-[19vw] font-bold leading-none">
+            Collection
           </div>
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </div>
@@ -499,8 +499,8 @@ export default function HomePage() {
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
               <h1 className="text-5xl font-bold leading-none tracking-tight text-white drop-shadow-xl sm:text-7xl">
-                zenshin.
-                <span className="ml-4 align-middle text-4xl text-[#8b5cf6] sm:text-6xl">全身</span>
+                AnimeTracker
+                <span className="ml-4 align-middle text-3xl text-primary sm:text-5xl">Beta</span>
               </h1>
               <p className="mt-8 max-w-2xl text-base font-bold leading-relaxed tracking-wide text-white/85 sm:text-lg">
                 Смотри, собирай и открывай аниме в личной медиатеке без лишней оболочки: тёмный интерфейс, быстрый каталог и твоя коллекция под рукой.
@@ -527,8 +527,8 @@ export default function HomePage() {
                 {animeList.slice(0, 3).map((anime) => {
                   const image = getProxiedImageUrl(getCoverImage(anime))
                   return (
-                    <Link key={`hero-a-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-48 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_25px_45px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:scale-105">
-                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />}
+                    <Link key={`hero-a-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-48 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_14px_28px_rgba(0,0,0,0.34)] transition-colors duration-150 hover:bg-[#232326]">
+                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />}
                       <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
                         {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
                       </div>
@@ -540,8 +540,8 @@ export default function HomePage() {
                 {animeList.slice(3, 6).map((anime) => {
                   const image = getProxiedImageUrl(getCoverImage(anime))
                   return (
-                    <Link key={`hero-b-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-56 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_25px_45px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:scale-105">
-                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />}
+                    <Link key={`hero-b-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-56 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_14px_28px_rgba(0,0,0,0.34)] transition-colors duration-150 hover:bg-[#232326]">
+                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />}
                       <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
                         {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
                       </div>
@@ -557,7 +557,7 @@ export default function HomePage() {
       <section className="px-4 sm:px-6 lg:px-8 mb-8" id="anime-catalog">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            className="zenshin-panel rounded-sm p-4 sm:p-5"
+            className="anime-panel rounded-sm p-4 sm:p-5"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.18 }}

@@ -202,7 +202,7 @@ export default function AnimePage() {
               <img
                 src={bannerUrl}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-55 blur-3xl brightness-50 saturate-150"
+                className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl brightness-50 saturate-125"
               />
               <img
                 src={bannerUrl}
@@ -411,7 +411,7 @@ export default function AnimePage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {score > 0 && (
-                <Card className="glass hover:scale-105 transition-all duration-300">
+                <Card className="glass transition-colors duration-150">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
@@ -422,7 +422,7 @@ export default function AnimePage() {
                 </Card>
               )}
               {anime.episodes && (
-                <Card className="glass hover:scale-105 transition-all duration-300">
+                <Card className="glass transition-colors duration-150">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <PlayCircle className="h-6 w-6 text-primary" />
@@ -433,7 +433,7 @@ export default function AnimePage() {
                 </Card>
               )}
               {year && (
-                <Card className="glass hover:scale-105 transition-all duration-300">
+                <Card className="glass transition-colors duration-150">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Calendar className="h-6 w-6 text-primary" />
@@ -444,7 +444,7 @@ export default function AnimePage() {
                 </Card>
               )}
               {anime.duration && (
-                <Card className="glass hover:scale-105 transition-all duration-300">
+                <Card className="glass transition-colors duration-150">
                   <CardContent className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Clock className="h-6 w-6 text-primary" />
@@ -601,7 +601,7 @@ export default function AnimePage() {
                                 <img
                                   src={relImage}
                                   alt={relTitle}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
@@ -637,7 +637,7 @@ export default function AnimePage() {
                           <img
                             src={simImage}
                             alt={simTitle}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

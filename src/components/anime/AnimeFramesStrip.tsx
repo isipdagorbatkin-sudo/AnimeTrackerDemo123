@@ -89,7 +89,7 @@ export function AnimeFramesStrip({ title, fallbackTitles, idMal, year, episodes 
             <img
               src={frame}
               alt={`Кадр ${index + 1}`}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90"
               loading="lazy"
             />
             <div className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[0.65rem] font-medium text-white/85 backdrop-blur">

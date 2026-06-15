@@ -50,17 +50,13 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
   return (
     <>
       <motion.div
-        className="group relative z-0 w-full overflow-visible transition-all duration-300 hover:z-30"
+        className="group relative z-0 w-full overflow-visible transition-colors duration-150 hover:z-30"
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '80px' }}
-        whileHover={{ scale: 1.06 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
-        {imageUrl && !imageError && (
-          <img src={imageUrl} alt="" className="poster-glow h-full w-full rounded-sm object-cover" />
-        )}
-        <div className="relative overflow-hidden rounded-sm bg-[#111113] shadow-[0_22px_50px_rgba(0,0,0,0.42)]">
+        <div className="relative overflow-hidden rounded-sm bg-[#111113] shadow-[0_14px_28px_rgba(0,0,0,0.34)]">
           <Link href={`/anime/${anime.id}`}>
             <div className="relative card-image">
             {imageError || !imageUrl ? (
@@ -77,7 +73,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
                   src={imageUrl}
                   alt={title}
                   className={cn(
-                    'w-full h-full object-cover transition-all duration-500 ease-in-out group-hover:scale-110 group-hover:saturate-125',
+                    'w-full h-full object-cover transition-opacity duration-150 ease-out group-hover:opacity-90',
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   )}
                   loading="lazy"

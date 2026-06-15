@@ -115,11 +115,8 @@ export function CollectionAnimeCard({
       tabIndex={0}
       onClick={openAnime}
       onKeyDown={onCardKeyDown}
-      className="group relative cursor-pointer overflow-hidden rounded-sm border border-white/15 bg-[#111113]/88 shadow-[0_24px_54px_rgba(0,0,0,0.32)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:bg-[#1a1a1d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="group relative cursor-pointer overflow-hidden rounded-sm border border-white/15 bg-[#111113]/88 shadow-[0_14px_28px_rgba(0,0,0,0.3)] transition-colors duration-150 hover:border-primary/40 hover:bg-[#1a1a1d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
-      {imageUrl && !imageError && (
-        <img src={imageUrl} alt="" className="poster-glow h-full w-full object-cover" />
-      )}
       <div className={cn('relative z-10 grid gap-4 p-3 sm:p-4', compact ? 'sm:grid-cols-[88px_minmax(0,1fr)]' : 'sm:grid-cols-[104px_minmax(0,1fr)]')}>
         <Link
           href={href}
@@ -134,7 +131,7 @@ export function CollectionAnimeCard({
             <img
               src={imageUrl}
               alt={title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90"
               loading="lazy"
               onError={() => setImageError(true)}
             />

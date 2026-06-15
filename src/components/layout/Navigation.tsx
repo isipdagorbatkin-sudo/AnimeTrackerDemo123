@@ -36,9 +36,9 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
       <div className="flex min-w-0 flex-1 items-center gap-5">
         <Link href="/" className="group flex shrink-0 flex-col leading-none">
           <span className="text-base font-bold tracking-tight text-white transition-colors group-hover:text-primary">
-            zenshin.
+            AnimeTracker
           </span>
-          <span className="-mt-1 text-[0.62rem] font-bold text-[#8b5cf6]">全身</span>
+          <span className="-mt-0.5 text-[0.62rem] font-bold text-primary/80">аниме-трекер</span>
         </Link>
 
         <span className="h-5 w-px bg-white/20" />
