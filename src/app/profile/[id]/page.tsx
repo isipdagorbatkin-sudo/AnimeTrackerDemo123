@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   ArrowLeft, Calendar, User, MessageSquare, Loader2,
   MapPin, Quote, Heart, Film, ListMusic, MessageCircle, Trash2, Send,
-  Plus,
+  Plus, Trophy, Lock, CheckCircle2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getAnimeById, getCoverImage, AniListAnime } from '@/lib/anilist/client'
@@ -21,6 +21,7 @@ import { fetchRussianText, getRussianText, useRussianTitle } from '@/lib/russian
 import { normalizeAnimeTitleKey } from '@/lib/anime-text'
 import { CollectionAnimeCard } from '@/components/anime/CollectionAnimeCard'
 import Link from 'next/link'
+import { AchievementProgress, calculateAchievements } from '@/lib/achievements'
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -40,6 +41,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('')
   const [creatingPlaylist, setCreatingPlaylist] = useState(false)
   const [collectionTitleKeys, setCollectionTitleKeys] = useState<Record<number, string>>({})
+  const [collectionAnimeDetails, setCollectionAnimeDetails] = useState<Record<number, AniListAnime>>({})
+  const [achievementSocialStats, setAchievementSocialStats] = useState({
+    friendsCount: 0,
+    sentMessagesCount: 0,
+    receivedMessagesCount: 0,
+    sentCommentsCount: 0,
+  })
   const supabase = createClient()
   const favTitle = useRussianTitle(favoriteAnime)
 
@@ -54,13 +62,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const missingIds = Array.from(new Set(collection.map(item => item.anime_id)))
-      .filter(id => !collectionTitleKeys[id])
+      .filter(id => !collectionAnimeDetails[id])
     if (missingIds.length === 0) return
 
     let cancelled = false
     Promise.all(missingIds.map(async (id) => {
       const anime = await getAnimeById(id)
-      if (!anime) return [id, String(id)] as const
+      if (!anime) return { id, key: String(id), anime: null }
 
       if (anime.idMal) {
         await fetchRussianText(anime.idMal, anime.title?.english, anime.title?.romaji, anime.title?.native)
@@ -68,13 +76,20 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
       const russian = anime.idMal ? getRussianText(anime.idMal) : null
       const title = russian?.title || anime.title?.romaji || anime.title?.english || anime.title?.native || String(id)
-      return [id, normalizeAnimeTitleKey(title) || String(id)] as const
+      return { id, key: normalizeAnimeTitleKey(title) || String(id), anime }
     })).then((entries) => {
       if (cancelled) return
       setCollectionTitleKeys(prev => {
         const next = { ...prev }
-        entries.forEach(([id, key]) => {
+        entries.forEach(({ id, key }) => {
           next[id] = key
+        })
+        return next
+      })
+      setCollectionAnimeDetails(prev => {
+        const next = { ...prev }
+        entries.forEach(({ id, anime }) => {
+          if (anime) next[id] = anime
         })
         return next
       })
@@ -83,7 +98,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     return () => {
       cancelled = true
     }
-  }, [collection, collectionTitleKeys])
+  }, [collection, collectionAnimeDetails])
 
   const loadProfile = async () => {
     try {
@@ -132,6 +147,38 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       setCollection(collectionResult.data || [])
       setPlaylists(playlistsResult.data || [])
       setComments(commentsResult.data || [])
+
+      const [
+        friendsResult,
+        sentMessagesResult,
+        receivedMessagesResult,
+        sentCommentsResult,
+      ] = await Promise.all([
+        supabase
+          .from('friendships')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'accepted')
+          .or(`user_id.eq.${params.id},friend_id.eq.${params.id}`),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('sender_id', params.id),
+        supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('receiver_id', params.id),
+        supabase
+          .from('profile_comments')
+          .select('id', { count: 'exact', head: true })
+          .eq('author_id', params.id),
+      ])
+
+      setAchievementSocialStats({
+        friendsCount: friendsResult.count || 0,
+        sentMessagesCount: sentMessagesResult.count || 0,
+        receivedMessagesCount: receivedMessagesResult.count || 0,
+        sentCommentsCount: sentCommentsResult.count || 0,
+      })
     } catch (error) {
       console.error('Ошибка при загрузке профиля:', error)
     } finally {
@@ -252,6 +299,34 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     return colorMap[status] || ''
   }
 
+  const safeCollection = Array.isArray(collection) ? collection : []
+  const safePlaylists = Array.isArray(playlists) ? playlists : []
+  const safeComments = Array.isArray(comments) ? comments : []
+  const watchingItems = safeCollection.filter(i => i.status === 'watching')
+  const completedItems = safeCollection.filter(i => i.status === 'completed')
+  const droppedItems = safeCollection.filter(i => i.status === 'dropped')
+  const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
+  const uniqueCollectionCount = new Set(safeCollection.map(i => collectionTitleKeys[i.anime_id] || String(i.anime_id))).size
+  const achievements = useMemo(() => calculateAchievements({
+    profile,
+    collection: safeCollection,
+    animeById: collectionAnimeDetails,
+    playlistsCount: safePlaylists.length,
+    commentsCount: safeComments.length,
+    sentCommentsCount: achievementSocialStats.sentCommentsCount,
+    friendsCount: achievementSocialStats.friendsCount,
+    sentMessagesCount: achievementSocialStats.sentMessagesCount,
+    receivedMessagesCount: achievementSocialStats.receivedMessagesCount,
+  }), [
+    achievementSocialStats,
+    collectionAnimeDetails,
+    profile,
+    safeCollection,
+    safeComments.length,
+    safePlaylists.length,
+  ])
+  const unlockedAchievements = achievements.filter((achievement) => achievement.unlocked)
+
   if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -270,15 +345,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       </div>
     )
   }
-
-  const safeCollection = Array.isArray(collection) ? collection : []
-  const safePlaylists = Array.isArray(playlists) ? playlists : []
-  const safeComments = Array.isArray(comments) ? comments : []
-  const watchingItems = safeCollection.filter(i => i.status === 'watching')
-  const completedItems = safeCollection.filter(i => i.status === 'completed')
-  const droppedItems = safeCollection.filter(i => i.status === 'dropped')
-  const planItems = safeCollection.filter(i => i.status === 'plan_to_watch')
-  const uniqueCollectionCount = new Set(safeCollection.map(i => collectionTitleKeys[i.anime_id] || String(i.anime_id))).size
 
   return (
     <div className="min-h-screen relative">
@@ -403,6 +469,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Коллекция ({uniqueCollectionCount})
               </TabsTrigger>
+              <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+                <Trophy className="h-4 w-4 mr-1" />
+                Достижения ({unlockedAchievements.length}/{achievements.length})
+              </TabsTrigger>
               <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Смотрю ({watchingItems.length})
               </TabsTrigger>
@@ -440,6 +510,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               ) : (
                 <CollectionList items={safeCollection} getStatusText={getStatusText} getStatusColor={getStatusColor} />
               )}
+            </TabsContent>
+
+            <TabsContent value="achievements">
+              <AchievementsPanel achievements={achievements} />
             </TabsContent>
 
             <TabsContent value="watching">
@@ -663,6 +737,107 @@ function CollectionList({
           getStatusColor={getStatusColor}
         />
       ))}
+    </div>
+  )
+}
+
+const achievementCategoryLabels: Record<string, string> = {
+  collection: 'Коллекция',
+  genres: 'Жанры',
+  ratings: 'Оценки',
+  profile: 'Профиль',
+  social: 'Социалка',
+}
+
+const achievementTierClasses: Record<string, string> = {
+  bronze: 'border-orange-400/25 bg-orange-400/10 text-orange-200',
+  silver: 'border-slate-300/25 bg-slate-300/10 text-slate-100',
+  gold: 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200',
+  platinum: 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100',
+}
+
+function AchievementsPanel({ achievements }: { achievements: AchievementProgress[] }) {
+  const unlocked = achievements.filter((achievement) => achievement.unlocked)
+  const grouped = achievements.reduce<Record<string, AchievementProgress[]>>((acc, achievement) => {
+    if (!acc[achievement.category]) acc[achievement.category] = []
+    acc[achievement.category].push(achievement)
+    return acc
+  }, {})
+
+  return (
+    <div className="space-y-6">
+      <Card className="glass overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-bold">Достижения профиля</h3>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Открываются автоматически по уже добавленной коллекции, оценкам и активности на сайте.
+              </p>
+            </div>
+            <div className="text-left sm:text-right">
+              <div className="text-3xl font-bold text-primary">{unlocked.length}/{achievements.length}</div>
+              <div className="text-xs text-muted-foreground">открыто</div>
+            </div>
+          </div>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${Math.round((unlocked.length / achievements.length) * 100)}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {Object.entries(grouped).map(([category, list]) => {
+        const opened = list.filter((achievement) => achievement.unlocked).length
+        return (
+          <section key={category} className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold">{achievementCategoryLabels[category] || category}</h3>
+              <Badge variant="outline" className="rounded-sm">
+                {opened}/{list.length}
+              </Badge>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {list.map((achievement) => (
+                <div
+                  key={achievement.id}
+                  className={`rounded-sm border p-4 transition-colors ${
+                    achievement.unlocked
+                      ? 'border-primary/35 bg-primary/10'
+                      : 'border-white/10 bg-[#111113]/72 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border ${achievementTierClasses[achievement.tier]}`}>
+                      {achievement.unlocked ? <CheckCircle2 className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold leading-tight">{achievement.title}</h4>
+                        <Badge variant={achievement.unlocked ? 'success' : 'outline'} className="rounded-sm">
+                          {achievement.unlocked ? 'Открыто' : `${Math.min(achievement.progress, achievement.target)}/${achievement.target}`}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{achievement.description}</p>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${achievement.unlocked ? 'bg-primary' : 'bg-white/30'}`}
+                          style={{ width: `${achievement.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
