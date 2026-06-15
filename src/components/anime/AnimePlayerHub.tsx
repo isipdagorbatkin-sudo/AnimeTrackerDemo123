@@ -4,6 +4,7 @@ import { YummyPlayer } from '@/components/anime/YummyPlayer'
 
 interface AnimePlayerHubProps {
   animeTitle: string
+  animeId?: number | null
   fallbackTitles?: string[]
   idMal?: number | null
   year?: number | null

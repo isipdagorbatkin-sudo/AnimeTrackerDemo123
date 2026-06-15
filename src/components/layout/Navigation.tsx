@@ -77,8 +77,9 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
         </nav>
       </div>
 
-      <Link
-        href="/search"
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
         className="mx-6 hidden h-8 w-[32vw] max-w-[470px] items-center justify-between border border-white/20 bg-[#111113] px-3 text-white/45 transition-colors hover:border-white/35 lg:flex"
       >
         <span className="flex items-center gap-2">
@@ -89,7 +90,7 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
           <kbd className="border border-white/25 px-1 leading-none">ctrl</kbd>
           <kbd className="border border-white/25 px-1 leading-none">k</kbd>
         </span>
-      </Link>
+      </button>
 
       <div className="flex shrink-0 items-center gap-5">
         <Link href="/profile/settings" className="transition-colors hover:text-white">

@@ -847,8 +847,20 @@ export default function HomePage() {
                 )}
               </div>
             ) : loading && animeList.length === 0 ? (
-              <div className="flex items-center justify-center py-32">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <div className="anime-grid">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <div key={index} className="overflow-hidden rounded-sm border border-white/10 bg-[#111113]">
+                    <div className="skeleton aspect-[2/3] w-full" />
+                    <div className="space-y-2 p-2.5">
+                      <div className="skeleton h-4 w-5/6" />
+                      <div className="skeleton h-4 w-2/3" />
+                      <div className="flex gap-1 pt-1">
+                        <div className="skeleton h-7 flex-1" />
+                        <div className="skeleton h-7 w-7" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : error ? (
               <div className="empty-state py-32">

@@ -565,6 +565,7 @@ export default function AnimePage() {
             {anime && (
               <AnimePlayerHub
                 animeTitle={title || anime.title?.romaji || anime.title?.english || ''}
+                animeId={anime.id}
                 fallbackTitles={[anime.title?.romaji, anime.title?.english, anime.title?.native].filter(Boolean) as string[]}
                 idMal={anime.idMal}
                 year={anime.startDate?.year || anime.seasonYear}

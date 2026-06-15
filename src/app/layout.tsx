@@ -7,6 +7,8 @@ import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollToTop } from '@/components/ui/ScrollToTop'
 import { ScrollMemory } from '@/components/ui/ScrollMemory'
+import { CommandPalette } from '@/components/ui/CommandPalette'
+import { ContinueWatching } from '@/components/anime/ContinueWatching'
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -71,6 +73,8 @@ export default async function RootLayout({
           </main>
         )}
         <ScrollMemory />
+        <CommandPalette />
+        <ContinueWatching />
         <ScrollToTop />
         <Analytics />
       </body>

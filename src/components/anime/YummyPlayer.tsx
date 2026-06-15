@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, List, Loader2, Play, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { saveContinueWatching } from '@/components/anime/ContinueWatching'
 
 interface PlayerEpisode {
   id: string
@@ -43,6 +44,7 @@ interface KodikResult {
 
 interface YummyPlayerProps {
   animeTitle: string
+  animeId?: number | null
   fallbackTitles?: string[]
   idMal?: number | null
   year?: number | null
@@ -113,7 +115,7 @@ function mapKodikSources(results: KodikResult[]): PlayerSource[] {
     })
 }
 
-export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes, previewImageUrl }: YummyPlayerProps) {
+export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, episodes, previewImageUrl }: YummyPlayerProps) {
   const [sources, setSources] = useState<PlayerSource[]>([])
   const [animeName, setAnimeName] = useState('')
   const [selectedSourceKey, setSelectedSourceKey] = useState('')
@@ -231,6 +233,18 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes,
   useEffect(() => {
     setEpisodesExpanded(false)
   }, [selectedSourceKey])
+
+  useEffect(() => {
+    if (!selectedSource || !selectedEpisode) return
+    saveContinueWatching({
+      animeId,
+      animeTitle: animeName || animeTitle,
+      player: cleanPlayerName(selectedSource.player),
+      dubbing: cleanDubbingName(selectedSource.dubbing),
+      episodeNumber: selectedEpisode.number,
+      updatedAt: Date.now(),
+    })
+  }, [animeId, animeName, animeTitle, selectedEpisode, selectedSource])
 
   const selectSource = (source: PlayerSource) => {
     const episodeNumber = selectedEpisode?.number
