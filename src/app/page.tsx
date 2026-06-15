@@ -149,6 +149,7 @@ export default function HomePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabType>('airing')
   const [animeList, setAnimeList] = useState<AniListAnime[]>([])
+  const [heroAnimeList, setHeroAnimeList] = useState<AniListAnime[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedGenre, setSelectedGenre] = useState<string>('')
@@ -347,6 +348,20 @@ export default function HomePage() {
       loadAnime(1, false)
     }
   }, [activeTab, guessMode])
+
+  useEffect(() => {
+    let cancelled = false
+    getAiringAnime(1, 20, 'POPULARITY_DESC')
+      .then((result) => {
+        if (!cancelled) setHeroAnimeList(dedupeAnime(result.Page?.media || []))
+      })
+      .catch(() => {
+        if (!cancelled) setHeroAnimeList([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -582,6 +597,36 @@ export default function HomePage() {
     setGuessStep('result')
   }
 
+  const heroAnime = (heroAnimeList.length ? heroAnimeList : animeList).slice(0, 14)
+  const heroLeft = heroAnime.slice(0, 7)
+  const heroRight = heroAnime.slice(7, 14)
+  const renderHeroRail = (items: AniListAnime[], direction: 'up' | 'down') => {
+    const loopItems = items.length > 0 ? [...items, ...items] : []
+    return (
+      <div className="hero-anime-mask">
+        <div className={cn('hero-anime-rail', direction === 'down' && 'hero-anime-rail-down')}>
+          {loopItems.map((anime, index) => {
+            const image = getProxiedImageUrl(getCoverImage(anime))
+            const heroTitle = anime.title?.romaji || anime.title?.english || anime.title?.native || ''
+            return (
+              <Link
+                key={`${direction}-${anime.id}-${index}`}
+                href={`/anime/${anime.id}`}
+                className="hero-anime-card group"
+              >
+                {image && <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/82" />
+                <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-8 text-sm font-bold leading-tight text-white drop-shadow">
+                  {heroTitle}
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="font-[var(--font-display)]">
       <section className="relative min-h-[calc(100svh-3rem)] overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
@@ -624,37 +669,13 @@ export default function HomePage() {
             </motion.div>
 
             <motion.div
-              className="hidden h-[520px] grid-cols-2 gap-5 overflow-hidden lg:grid"
+              className="hidden h-[600px] grid-cols-2 gap-5 overflow-hidden lg:grid"
               initial={{ opacity: 0, x: 28 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="flex translate-y-8 flex-col gap-5">
-                {animeList.slice(0, 3).map((anime) => {
-                  const image = getProxiedImageUrl(getCoverImage(anime))
-                  return (
-                    <Link key={`hero-a-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-48 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_14px_28px_rgba(0,0,0,0.34)] transition-colors duration-150 hover:bg-[#232326]">
-                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                        {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-              <div className="flex flex-col gap-5">
-                {animeList.slice(3, 6).map((anime) => {
-                  const image = getProxiedImageUrl(getCoverImage(anime))
-                  return (
-                    <Link key={`hero-b-${anime.id}`} href={`/anime/${anime.id}`} className="group relative h-56 overflow-hidden rounded-sm bg-[#1a1a1d] shadow-[0_14px_28px_rgba(0,0,0,0.34)] transition-colors duration-150 hover:bg-[#232326]">
-                      {image && <img src={image} alt="" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/62 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                        {(anime.title?.romaji || anime.title?.english || anime.title?.native || '').slice(0, 28)}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
+              <div className="translate-y-10">{renderHeroRail(heroLeft, 'up')}</div>
+              <div className="-translate-y-6">{renderHeroRail(heroRight.length ? heroRight : heroLeft, 'down')}</div>
             </motion.div>
           </div>
         </div>

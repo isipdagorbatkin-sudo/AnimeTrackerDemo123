@@ -14,12 +14,17 @@ export function ScrollMemory() {
   const [search, setSearch] = useState('')
   const restoredKeyRef = useRef('')
   const key = useMemo(() => getScrollKey(pathname, search), [pathname, search])
+  const isAnimeDetailPage = /^\/anime\/\d+/.test(pathname)
 
   useEffect(() => {
     setSearch(window.location.search.replace(/^\?/, ''))
   }, [pathname])
 
   useEffect(() => {
+    if (isAnimeDetailPage) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      return
+    }
     if (!key || restoredKeyRef.current === key) return
     restoredKeyRef.current = key
 
@@ -37,9 +42,10 @@ export function ScrollMemory() {
       window.clearTimeout(first)
       window.clearTimeout(second)
     }
-  }, [key])
+  }, [isAnimeDetailPage, key])
 
   useEffect(() => {
+    if (isAnimeDetailPage) return
     let frame = 0
 
     const save = () => {
@@ -75,7 +81,7 @@ export function ScrollMemory() {
       window.removeEventListener('pagehide', onPageHide)
       document.removeEventListener('click', onClick, true)
     }
-  }, [key])
+  }, [isAnimeDetailPage, key])
 
   return null
 }

@@ -261,17 +261,16 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
     setEpisodesExpanded(false)
   }, [selectedSourceKey])
 
-  useEffect(() => {
-    if (!selectedSource || !selectedEpisode) return
+  const saveProgress = useCallback((source: PlayerSource, episode: PlayerEpisode) => {
     saveContinueWatching({
       animeId,
       animeTitle: animeName || animeTitle,
-      player: cleanPlayerName(selectedSource.player),
-      dubbing: cleanDubbingName(selectedSource.dubbing),
-      episodeNumber: selectedEpisode.number,
+      player: cleanPlayerName(source.player),
+      dubbing: cleanDubbingName(source.dubbing),
+      episodeNumber: episode.number,
       updatedAt: Date.now(),
     })
-  }, [animeId, animeName, animeTitle, selectedEpisode, selectedSource])
+  }, [animeId, animeName, animeTitle])
 
   const selectSource = (source: PlayerSource) => {
     const episodeNumber = selectedEpisode?.number
@@ -279,6 +278,7 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
     setSelectedSourceKey(source.key)
     setSelectedEpisodeId(nextEpisode?.id || '')
     persistChoice(source.key, nextEpisode?.id || '')
+    if (nextEpisode) saveProgress(source, nextEpisode)
   }
 
   const selectProvider = (player: string) => {
@@ -290,6 +290,7 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
     if (!selectedSource) return
     setSelectedEpisodeId(episode.id)
     persistChoice(selectedSource.key, episode.id)
+    saveProgress(selectedSource, episode)
   }
 
   const continueFromEpisode = (episode: PlayerEpisode) => {
@@ -319,15 +320,16 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
 
   return (
     <div className="space-y-4">
-      <div id="anime-player-frame" className="relative mx-auto aspect-video w-full max-w-5xl max-h-[62svh] overflow-hidden rounded-sm border border-border/35 bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
+      <div id="anime-player-frame" className="relative mx-auto aspect-video w-full max-w-5xl max-h-[62svh] overflow-hidden rounded-sm bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         {selectedEpisode?.iframeUrl ? (
           <iframe
             key={selectedEpisode.iframeUrl}
             src={selectedEpisode.iframeUrl}
-            className="h-full w-full"
+            className="h-full w-full border-0"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
+            scrolling="no"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_28%_18%,rgba(239,68,68,0.18),transparent_34%),linear-gradient(135deg,#101014,#18181f)]">
@@ -426,7 +428,7 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
           </div>
 
           {sourceMenuTab === 'player' ? (
-            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            <div className="no-scrollbar max-h-80 space-y-2 overflow-y-auto pr-1">
               {providers.map((player) => {
                 const active = selectedSource?.player === player
                 return (
@@ -450,7 +452,7 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
               })}
             </div>
           ) : (
-            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            <div className="no-scrollbar max-h-80 space-y-2 overflow-y-auto pr-1">
               {providerSources.map((source) => {
                 const active = source.key === selectedSourceKey
                 return (

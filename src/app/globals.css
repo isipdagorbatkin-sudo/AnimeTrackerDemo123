@@ -243,6 +243,75 @@ body::after {
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.36);
 }
 
+.hero-anime-mask {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.hero-anime-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: hero-rail-up 46s linear infinite;
+  will-change: transform;
+}
+
+.hero-anime-rail-down {
+  animation-name: hero-rail-down;
+  animation-duration: 52s;
+}
+
+.hero-anime-mask:hover .hero-anime-rail {
+  animation-play-state: paused;
+}
+
+.hero-anime-card {
+  position: relative;
+  display: block;
+  height: 178px;
+  overflow: hidden;
+  border-radius: 0.125rem;
+  background: #1a1a1d;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
+  transform: translateZ(0);
+}
+
+.hero-anime-card:nth-child(3n + 1) {
+  height: 206px;
+}
+
+.hero-anime-card:nth-child(4n + 2) {
+  height: 156px;
+}
+
+@keyframes hero-rail-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-50% - 0.625rem));
+  }
+}
+
+@keyframes hero-rail-down {
+  from {
+    transform: translateY(calc(-50% - 0.625rem));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-anime-rail,
+  .hero-anime-rail-down {
+    animation: none;
+  }
+}
+
 .anime-title-bar {
   border-bottom: 1px solid #374151;
   padding-bottom: 0.25rem;
@@ -250,6 +319,15 @@ body::after {
   font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: 0;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .skew3d {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Play, X } from 'lucide-react'
 
 type ContinueItem = {
@@ -11,26 +12,30 @@ type ContinueItem = {
   dubbing: string
   episodeNumber: number
   updatedAt: number
+  started?: boolean
 }
 
 const STORAGE_KEY = 'anime-player:continue'
 
 export function saveContinueWatching(item: ContinueItem) {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(item))
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...item, started: true }))
     window.dispatchEvent(new Event('continue-watching-updated'))
   } catch {}
 }
 
 export function ContinueWatching() {
+  const pathname = usePathname()
   const [item, setItem] = useState<ContinueItem | null>(null)
   const [hidden, setHidden] = useState(false)
+  const currentAnimeMatch = pathname.match(/^\/anime\/(\d+)/)
+  const currentAnimeId = currentAnimeMatch ? Number(currentAnimeMatch[1]) : null
 
   useEffect(() => {
     const load = () => {
       try {
         const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null') as ContinueItem | null
-        setItem(parsed?.animeTitle ? parsed : null)
+        setItem(parsed?.animeTitle && parsed.started ? parsed : null)
         setHidden(false)
       } catch {
         setItem(null)
@@ -45,9 +50,9 @@ export function ContinueWatching() {
     }
   }, [])
 
-  if (!item || hidden) return null
+  if (!item || hidden || !currentAnimeId || item.animeId !== currentAnimeId) return null
 
-  const href = item.animeId ? `/anime/${item.animeId}#anime-player-episodes` : '#'
+  const href = item.animeId ? `/anime/${item.animeId}#anime-player-frame` : '#'
 
   return (
     <div className="fixed bottom-20 left-1/2 z-50 w-[min(520px,calc(100vw-24px))] -translate-x-1/2 md:bottom-5">
