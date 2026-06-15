@@ -56,7 +56,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
         viewport={{ once: true, margin: '80px' }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="relative overflow-hidden rounded-sm bg-[#111113] shadow-[0_14px_28px_rgba(0,0,0,0.34)]">
+        <div className="relative overflow-hidden rounded-sm border border-white/10 bg-[#111113] shadow-[0_10px_22px_rgba(0,0,0,0.3)] transition-colors duration-150 group-hover:border-primary/45">
           <Link href={`/anime/${anime.id}`}>
             <div className="relative card-image">
             {imageError || !imageUrl ? (
@@ -83,7 +83,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
               </>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/8 to-transparent opacity-70 transition-opacity duration-150 group-hover:opacity-90" />
 
             {anime.status && (
               <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5">
@@ -117,14 +117,14 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             </div>
           </Link>
 
-          <div className="space-y-1.5 bg-[#111113] p-2.5 sm:space-y-2 sm:p-3">
+          <div className="space-y-1.5 bg-[#111113] p-2.5">
           <Link href={`/anime/${anime.id}`}>
-            <h3 className="line-clamp-2 h-10 text-[0.72rem] font-medium leading-snug opacity-90 transition-colors duration-150 group-hover:text-primary sm:text-sm">
+            <h3 className="line-clamp-2 min-h-9 text-[0.78rem] font-semibold leading-snug tracking-tight text-white/90 transition-colors duration-150 group-hover:text-primary sm:text-[0.82rem]">
               {title}
             </h3>
           </Link>
 
-          <div className="flex items-center justify-between gap-2 text-[0.55rem] text-white/55 sm:text-[0.65rem]">
+          <div className="flex items-center justify-between gap-2 text-[0.6rem] text-white/50 sm:text-[0.66rem]">
             {anime.format && (
               <span className="font-medium">
                 {getFormatText(anime.format)}
@@ -139,28 +139,28 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
           </div>
 
           {anime.genres && anime.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {anime.genres.slice(0, 3).map((genre) => (
+            <div className="flex min-h-5 flex-wrap gap-1 overflow-hidden">
+              {anime.genres.slice(0, 2).map((genre) => (
                 <Link key={genre} href={`/genre/${encodeURIComponent(genre)}`}>
-                  <span className="text-[0.45rem] sm:text-[0.55rem] font-medium px-1 sm:px-1.5 py-0.5 bg-[#232326] text-white/50 hover:text-primary transition-colors duration-150">
+                  <span className="text-[0.5rem] sm:text-[0.56rem] font-medium px-1.5 py-0.5 bg-[#232326] text-white/55 hover:text-primary transition-colors duration-150">
                     {translateGenre(genre)}
                   </span>
                 </Link>
               ))}
-              {(anime.genres.length - 3) > 0 && (
-                <span className="text-[0.5rem] text-muted-foreground/50">
-                  +{anime.genres.length - 3}
+              {(anime.genres.length - 2) > 0 && (
+                <span className="text-[0.56rem] text-muted-foreground/50">
+                  +{anime.genres.length - 2}
                 </span>
               )}
             </div>
           )}
 
-          <div className="flex gap-1 sm:gap-1.5 pt-1">
+          <div className="flex gap-1 pt-1">
             <Button
               size="sm"
               variant={isInCollection ? "outline" : "default"}
               className={cn(
-                "flex-1 h-6 sm:h-7 gap-0.5 sm:gap-1 rounded-sm text-[0.55rem] sm:text-[0.65rem]",
+                "flex-1 h-7 gap-1 rounded-sm text-[0.6rem] sm:text-[0.66rem]",
                 isInCollection
                   ? "border-green-400/30 text-green-400 hover:bg-green-400/10"
                   : "bg-[#2f3236] text-white hover:bg-primary"
@@ -181,19 +181,19 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             <Button
               size="sm"
               variant="outline"
-              className="h-6 w-6 sm:h-7 sm:w-7 !p-0 rounded-sm border-white/15 bg-[#1e1e20] hover:border-primary/50"
+              className="h-7 w-7 !p-0 rounded-sm border-white/15 bg-[#1e1e20] hover:border-primary/50"
               onClick={(e) => {
                 e.preventDefault()
                 setIsShareDialogOpen(true)
               }}
             >
-              <Share2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <Share2 className="h-3 w-3" />
             </Button>
           </div>
           </div>
         </div>
 
-        <div className="pointer-events-none absolute -left-6 -top-5 z-40 hidden w-80 overflow-hidden bg-[#1a1a1d] opacity-0 shadow-3xl drop-shadow-2xl transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 lg:block">
+        <div className="pointer-events-none absolute -left-6 -top-5 z-40 hidden w-80 overflow-hidden bg-[#1a1a1d] opacity-0 shadow-3xl drop-shadow-2xl transition-all duration-300">
           <div className="relative h-36 w-full overflow-hidden">
             {imageUrl && !imageError && (
               <img src={getProxiedImageUrl(anime.bannerImage || rawImageUrl)} alt="" className="h-full w-full object-cover brightness-75" />
