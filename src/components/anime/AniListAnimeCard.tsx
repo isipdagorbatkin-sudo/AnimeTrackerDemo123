@@ -54,9 +54,10 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '80px' }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -6, scale: 1.035 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="relative overflow-hidden rounded-sm border border-white/10 bg-[#111113] shadow-[0_10px_22px_rgba(0,0,0,0.3)] transition-colors duration-150 group-hover:border-primary/45">
+        <div className="relative overflow-hidden rounded-sm border border-white/10 bg-[#111113] shadow-[0_10px_22px_rgba(0,0,0,0.3)] transition-all duration-200 group-hover:border-primary/45 group-hover:shadow-[0_18px_36px_rgba(0,0,0,0.42)]">
           <Link href={`/anime/${anime.id}`}>
             <div className="relative card-image">
             {imageError || !imageUrl ? (
