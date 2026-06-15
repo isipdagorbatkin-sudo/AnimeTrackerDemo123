@@ -569,6 +569,7 @@ export default function AnimePage() {
                 idMal={anime.idMal}
                 year={anime.startDate?.year || anime.seasonYear}
                 episodes={anime.episodes}
+                previewImageUrl={bannerUrl || imageUrl}
               />
             )}
           </div>

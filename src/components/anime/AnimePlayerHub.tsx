@@ -8,6 +8,7 @@ interface AnimePlayerHubProps {
   idMal?: number | null
   year?: number | null
   episodes?: number | null
+  previewImageUrl?: string
 }
 
 export function AnimePlayerHub(props: AnimePlayerHubProps) {

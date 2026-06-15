@@ -107,7 +107,7 @@ async function fetchAnimeFrames(anime: AniListAnime): Promise<string[]> {
 
 const tabConfig = [
   { value: 'top' as TabType, label: 'Топ', icon: TrendingUp },
-  { value: 'airing' as TabType, label: 'Онгоинги', icon: Clock },
+  { value: 'airing' as TabType, label: 'Сейчас популярно', icon: Clock },
   { value: 'upcoming' as TabType, label: 'Анонсы', icon: Calendar },
   { value: 'completed' as TabType, label: 'Завершённые', icon: CheckCircle },
   { value: 'movies' as TabType, label: 'Фильмы', icon: Film },
@@ -500,7 +500,6 @@ export default function HomePage() {
             >
               <h1 className="text-5xl font-bold leading-none tracking-tight text-white drop-shadow-xl sm:text-7xl">
                 AnimeTracker
-                <span className="ml-4 align-middle text-3xl text-primary sm:text-5xl">Beta</span>
               </h1>
               <p className="mt-8 max-w-2xl text-base font-bold leading-relaxed tracking-wide text-white/85 sm:text-lg">
                 Смотри, собирай и открывай аниме в личной медиатеке без лишней оболочки: тёмный интерфейс, быстрый каталог и твоя коллекция под рукой.
@@ -629,6 +628,7 @@ export default function HomePage() {
             setSelectedGenre('')
             setSearchQuery('')
             setCurrentPage(1)
+            if (v === 'airing') setSortBy('POPULARITY_DESC')
           }} className="w-full">
             <TabsList className="w-full sm:w-auto inline-flex gap-1 mb-6 bg-card/70 border border-border/70 p-1.5 rounded-2xl backdrop-blur flex-wrap">
               {tabConfig.map((tab) => {

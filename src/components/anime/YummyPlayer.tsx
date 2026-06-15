@@ -47,11 +47,13 @@ interface YummyPlayerProps {
   idMal?: number | null
   year?: number | null
   episodes?: number | null
+  previewImageUrl?: string
 }
 
 type SourceMenuTab = 'dubbing' | 'player'
 
 const EPISODES_SECTION_ID = 'anime-player-episodes'
+const COLLAPSED_EPISODE_LIMIT = 24
 
 function formatDuration(seconds?: number): string {
   if (!seconds) return ''
@@ -111,7 +113,7 @@ function mapKodikSources(results: KodikResult[]): PlayerSource[] {
     })
 }
 
-export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes }: YummyPlayerProps) {
+export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes, previewImageUrl }: YummyPlayerProps) {
   const [sources, setSources] = useState<PlayerSource[]>([])
   const [animeName, setAnimeName] = useState('')
   const [selectedSourceKey, setSelectedSourceKey] = useState('')
@@ -119,6 +121,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sourceMenuTab, setSourceMenuTab] = useState<SourceMenuTab>('dubbing')
+  const [episodesExpanded, setEpisodesExpanded] = useState(false)
 
   const storageKey = useMemo(() => `anime-player:${idMal || animeTitle}`, [animeTitle, idMal])
 
@@ -136,6 +139,17 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     if (!selectedSource || !selectedEpisode) return -1
     return selectedSource.episodes.findIndex((episode) => episode.id === selectedEpisode.id)
   }, [selectedEpisode, selectedSource])
+
+  const visibleEpisodes = useMemo(() => {
+    if (!selectedSource) return []
+    return episodesExpanded
+      ? selectedSource.episodes
+      : selectedSource.episodes.slice(0, COLLAPSED_EPISODE_LIMIT)
+  }, [episodesExpanded, selectedSource])
+
+  const hasHiddenEpisodes = Boolean(
+    selectedSource && selectedSource.episodes.length > COLLAPSED_EPISODE_LIMIT
+  )
 
   const providers = useMemo(() => [...new Set(sources.map((source) => source.player))], [sources])
 
@@ -214,6 +228,10 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
     void loadPlayers()
   }, [animeTitle, loadPlayers])
 
+  useEffect(() => {
+    setEpisodesExpanded(false)
+  }, [selectedSourceKey])
+
   const selectSource = (source: PlayerSource) => {
     const episodeNumber = selectedEpisode?.number
     const nextEpisode = source.episodes.find((episode) => episode.number === episodeNumber) || source.episodes[0]
@@ -248,7 +266,7 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
 
   return (
     <div className="space-y-4">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border/35 bg-black shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
+      <div className="relative mx-auto aspect-video w-full max-w-5xl max-h-[62svh] overflow-hidden rounded-sm border border-border/35 bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         {selectedEpisode?.iframeUrl ? (
           <iframe
             key={selectedEpisode.iframeUrl}
@@ -420,24 +438,61 @@ export function YummyPlayer({ animeTitle, fallbackTitles, idMal, year, episodes 
               <p className="text-xs text-muted-foreground">Длительность: {formatDuration(selectedEpisode.duration)}</p>
             ) : null}
           </div>
-          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
-            {selectedSource.episodes.map((episode) => (
+          <div className="space-y-2">
+            {visibleEpisodes.map((episode) => (
               <button
                 key={episode.id}
                 type="button"
                 onClick={() => selectEpisode(episode)}
                 disabled={loading}
                 className={cn(
-                  'flex aspect-[3/2] items-center justify-center rounded-lg border px-1 text-xs font-medium transition-all',
+                  'group grid w-full grid-cols-[96px_minmax(0,1fr)] items-stretch overflow-hidden rounded-sm border text-left transition-colors sm:grid-cols-[180px_minmax(0,1fr)_120px]',
                   selectedEpisode?.id === episode.id
-                    ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30'
-                    : 'border-border/30 bg-card/50 hover:border-primary/40 hover:bg-primary/5'
+                    ? 'border-primary/70 bg-primary/10'
+                    : 'border-border/35 bg-card/45 hover:border-primary/40 hover:bg-muted/35'
                 )}
               >
-                {episode.label === 'Плеер' ? episode.label : episode.number}
+                <span className="relative block h-20 overflow-hidden bg-[#111113] sm:h-24">
+                  {previewImageUrl ? (
+                    <img
+                      src={previewImageUrl}
+                      alt=""
+                      className="h-full w-full object-cover opacity-70 transition-opacity duration-150 group-hover:opacity-85"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="block h-full w-full bg-[linear-gradient(135deg,#151518,#232326)]" />
+                  )}
+                  <span className="absolute inset-0 bg-gradient-to-r from-black/10 to-black/65" />
+                  <span className="absolute left-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 text-[0.65rem] font-bold text-black">
+                    {episode.number}
+                  </span>
+                </span>
+                <span className="flex min-w-0 flex-col justify-center px-3 py-2 sm:px-4">
+                  <span className="line-clamp-1 text-sm font-semibold text-foreground sm:text-base">
+                    {episode.label === 'Плеер' ? `Серия ${episode.number}` : episode.label}
+                  </span>
+                  <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {cleanPlayerName(selectedSource.player)} · {cleanDubbingName(selectedSource.dubbing)}
+                  </span>
+                </span>
+                <span className="hidden items-center justify-end border-l border-border/25 px-3 text-xs text-muted-foreground sm:flex">
+                  {episode.duration ? formatDuration(episode.duration) : `Эп. ${episode.number}`}
+                </span>
               </button>
             ))}
           </div>
+          {hasHiddenEpisodes && (
+            <button
+              type="button"
+              onClick={() => setEpisodesExpanded((value) => !value)}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-sm border border-border/40 bg-card/55 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/45 hover:text-foreground sm:w-auto"
+            >
+              {episodesExpanded
+                ? 'Свернуть серии'
+                : `Показать больше (${selectedSource.episodes.length - COLLAPSED_EPISODE_LIMIT})`}
+            </button>
+          )}
         </div>
       )}
     </div>
