@@ -34,11 +34,20 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
   return (
     <header className="fixed left-0 right-0 top-0 z-50 hidden h-12 items-center border-b border-[#242428] bg-[#111113]/92 px-5 font-[var(--font-display)] text-sm text-white/70 backdrop-blur-xl md:flex">
       <div className="flex min-w-0 flex-1 items-center gap-5">
-        <Link href="/" className="group flex shrink-0 flex-col leading-none">
-          <span className="text-base font-bold tracking-tight text-white transition-colors group-hover:text-primary">
-            AnimeTracker
+        <Link href="/" className="group flex shrink-0 items-center gap-2.5">
+          <img
+            src="/anime-tracker-mark.svg"
+            alt=""
+            className="h-8 w-8 rounded-sm"
+            width={32}
+            height={32}
+          />
+          <span className="flex flex-col leading-none">
+            <span className="text-base font-bold tracking-tight text-white transition-colors group-hover:text-primary">
+              AnimeTracker
+            </span>
+            <span className="-mt-0.5 text-[0.62rem] font-bold text-primary/80">аниме-трекер</span>
           </span>
-          <span className="-mt-0.5 text-[0.62rem] font-bold text-primary/80">аниме-трекер</span>
         </Link>
 
         <span className="h-5 w-px bg-white/20" />

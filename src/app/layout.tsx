@@ -22,6 +22,11 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: 'AnimeTracker — Твой аниме-трекер',
   description: 'Отслеживай аниме, собирай коллекцию, общайся с друзьями',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/anime-tracker-mark.svg',
+  },
 }
 
 export default async function RootLayout({
