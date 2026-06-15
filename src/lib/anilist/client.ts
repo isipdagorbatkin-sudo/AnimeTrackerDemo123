@@ -18,6 +18,7 @@ export interface AniListAnime {
   genres: string[]
   averageScore: number | null
   meanScore: number | null
+  popularity: number | null
   episodes: number | null
   duration: number | null
   status: string
@@ -95,6 +96,7 @@ const ANIME_FRAGMENT = `
   genres
   averageScore
   meanScore
+  popularity
   episodes
   duration
   status

@@ -13,13 +13,14 @@ import {
   getCompletedAnime,
   getMovies,
   getAnimeByGenre,
+  getAnimeById,
   getRandomAnime,
   getCoverImage,
 } from '@/lib/anilist/client'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, Images, RotateCcw, CheckCircle2, XCircle, SlidersHorizontal } from 'lucide-react'
+import { Loader2, Search, Filter, TrendingUp, Clock, Calendar, Film, CheckCircle, ChevronDown, Star, Eye, GamepadIcon, HelpCircle, Send, FileText, Images, RotateCcw, CheckCircle2, XCircle, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { GenreFilterDialog } from '@/components/anime/GenreFilterDialog'
 import { translateGenre } from '@/lib/genres'
 import { cn } from '@/lib/utils'
@@ -32,8 +33,14 @@ import { motion } from 'framer-motion'
 import { useRussianText } from '@/lib/russian-cache'
 import { cleanAnimeDescription } from '@/lib/anime-text'
 
-type TabType = 'top' | 'airing' | 'upcoming' | 'completed' | 'movies' | 'guess'
+type TabType = 'airing' | 'recommendations' | 'top' | 'upcoming' | 'completed' | 'movies' | 'guess'
 type GuessMode = 'description' | 'frames'
+
+type CollectionSignal = {
+  anime_id: number
+  status?: string | null
+  rating?: number | null
+}
 
 const sortOptions: { value: AnimeSortOption; label: string }[] = [
   { value: 'POPULARITY_DESC', label: 'По популярности' },
@@ -83,6 +90,29 @@ function stripHtml(value: string | null): string {
   return cleanAnimeDescription(value).replace(/\s+/g, ' ').trim()
 }
 
+function collectionSignalWeight(item: CollectionSignal): number {
+  const normalizedRating = item.rating ? Math.min(10, Math.max(0, item.rating)) : 0
+  const ratingWeight = normalizedRating ? normalizedRating * 0.75 : 1.5
+  const statusWeight: Record<string, number> = {
+    completed: 4,
+    watching: 3,
+    plan_to_watch: 1,
+    on_hold: 0.5,
+    dropped: -3,
+  }
+
+  return ratingWeight + (statusWeight[item.status || ''] || 0)
+}
+
+function scoreRecommendation(anime: AniListAnime, genreWeights: Map<string, number>): number {
+  const genreScore = (anime.genres || []).reduce((sum, genre) => sum + (genreWeights.get(genre) || 0), 0)
+  const score = anime.meanScore || anime.averageScore || 0
+  const popularity = anime.popularity || 0
+  const recency = anime.seasonYear ? Math.max(0, anime.seasonYear - 1990) * 0.12 : 0
+
+  return genreScore * 2.7 + score * 0.45 + Math.log10(popularity + 10) * 7 + recency
+}
+
 async function fetchAnimeFrames(anime: AniListAnime): Promise<string[]> {
   const title = anime.title?.romaji || anime.title?.english || anime.title?.native || ''
   if (!title) return []
@@ -106,8 +136,9 @@ async function fetchAnimeFrames(anime: AniListAnime): Promise<string[]> {
 }
 
 const tabConfig = [
-  { value: 'top' as TabType, label: 'Топ', icon: TrendingUp },
   { value: 'airing' as TabType, label: 'Сейчас популярно', icon: Clock },
+  { value: 'recommendations' as TabType, label: 'Рекомендации', icon: Sparkles },
+  { value: 'top' as TabType, label: 'Топ', icon: TrendingUp },
   { value: 'upcoming' as TabType, label: 'Анонсы', icon: Calendar },
   { value: 'completed' as TabType, label: 'Завершённые', icon: CheckCircle },
   { value: 'movies' as TabType, label: 'Фильмы', icon: Film },
@@ -116,7 +147,7 @@ const tabConfig = [
 
 export default function HomePage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<TabType>('top')
+  const [activeTab, setActiveTab] = useState<TabType>('airing')
   const [animeList, setAnimeList] = useState<AniListAnime[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -128,6 +159,7 @@ export default function HomePage() {
   const [hasMore, setHasMore] = useState(false)
   const [remoteSearchQuery, setRemoteSearchQuery] = useState('')
   const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set())
+  const [collectionItems, setCollectionItems] = useState<CollectionSignal[]>([])
 
   const genreLoaderRef = useRef<() => Promise<void>>()
 
@@ -151,11 +183,81 @@ export default function HomePage() {
     if (!user) return
     const { data } = await supabase
       .from('anime_collection')
-      .select('anime_id')
+      .select('anime_id,status,rating')
       .eq('user_id', user.id)
       .eq('source', 'anilist')
-    if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+    if (data) {
+      setCollectionIds(new Set(data.map(i => i.anime_id)))
+      setCollectionItems(data as CollectionSignal[])
+    }
   }, [])
+
+  const loadRecommendations = useCallback(async (page: number = 1, perPage: number = 20): Promise<AniListSearchResponse> => {
+    if (collectionItems.length === 0) {
+      return getAiringAnime(page, perPage, 'POPULARITY_DESC')
+    }
+
+    const weightedItems = [...collectionItems]
+      .map((item) => ({ ...item, weight: collectionSignalWeight(item) }))
+      .filter((item) => item.weight > 0)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 22)
+
+    if (weightedItems.length === 0) {
+      return getTopAnime(page, perPage, 'POPULARITY_DESC')
+    }
+
+    const details = await Promise.all(
+      weightedItems.map(async (item) => {
+        try {
+          const anime = await getAnimeById(item.anime_id)
+          return anime ? { anime, weight: item.weight } : null
+        } catch {
+          return null
+        }
+      })
+    )
+
+    const genreWeights = new Map<string, number>()
+    for (const detail of details) {
+      if (!detail) continue
+      for (const genre of detail.anime.genres || []) {
+        genreWeights.set(genre, (genreWeights.get(genre) || 0) + detail.weight)
+      }
+    }
+
+    const topGenres = [...genreWeights.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([genre]) => genre)
+
+    const batches = await Promise.all([
+      getTopAnime(page, perPage, 'POPULARITY_DESC').catch(() => null),
+      getTopAnime(page, perPage, 'SCORE_DESC').catch(() => null),
+      ...topGenres.map((genre) => getAnimeByGenre(genre, page, perPage, 'POPULARITY_DESC').catch(() => null)),
+    ])
+
+    const candidates = dedupeAnime(
+      batches.flatMap((result) => result?.Page?.media || [])
+    )
+      .filter((anime) => !collectionIds.has(anime.id))
+      .filter((anime) => (anime.averageScore || anime.meanScore || 0) >= 62 || (anime.popularity || 0) >= 12000)
+      .sort((a, b) => scoreRecommendation(b, genreWeights) - scoreRecommendation(a, genreWeights))
+      .slice(0, perPage)
+
+    return {
+      Page: {
+        media: candidates,
+        pageInfo: {
+          total: candidates.length,
+          perPage,
+          currentPage: page,
+          lastPage: page + (candidates.length >= perPage ? 1 : 0),
+          hasNextPage: candidates.length >= perPage,
+        },
+      },
+    }
+  }, [collectionIds, collectionItems])
 
   const loadAnime = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
@@ -164,6 +266,7 @@ export default function HomePage() {
       let results: AniListSearchResponse
       switch (activeTab) {
         case 'airing': results = await getAiringAnime(page, 20, sortBy); break
+        case 'recommendations': results = await loadRecommendations(page, 20); break
         case 'upcoming': results = await getUpcomingAnime(page, 20, sortBy); break
         case 'completed': results = await getCompletedAnime(page, 20, sortBy); break
         case 'movies': results = await getMovies(page, 20, sortBy); break
@@ -179,7 +282,7 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [activeTab, sortBy])
+  }, [activeTab, loadRecommendations, sortBy])
 
   const startGuessGame = useCallback(async (mode: GuessMode = guessMode) => {
     setGuessStep('loading')
@@ -259,11 +362,14 @@ export default function HomePage() {
       if (!user) return
       supabase
         .from('anime_collection')
-        .select('anime_id')
+        .select('anime_id,status,rating')
         .eq('user_id', user.id)
         .eq('source', 'anilist')
         .then(({ data }) => {
-          if (data) setCollectionIds(new Set(data.map(i => i.anime_id)))
+          if (data) {
+            setCollectionIds(new Set(data.map(i => i.anime_id)))
+            setCollectionItems(data as CollectionSignal[])
+          }
         })
     })
   }, [])
@@ -396,6 +502,7 @@ export default function HomePage() {
         let result: AniListSearchResponse
         switch (activeTab) {
           case 'airing': result = await getAiringAnime(nextPage, 20, sortBy); break
+          case 'recommendations': result = await loadRecommendations(nextPage, 20); break
           case 'upcoming': result = await getUpcomingAnime(nextPage, 20, sortBy); break
           case 'completed': result = await getCompletedAnime(nextPage, 20, sortBy); break
           case 'movies': result = await getMovies(nextPage, 20, sortBy); break
@@ -412,7 +519,7 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, currentPage, searchQuery, remoteSearchQuery, selectedGenre, activeTab, sortBy])
+  }, [loading, hasMore, currentPage, searchQuery, remoteSearchQuery, selectedGenre, activeTab, sortBy, loadRecommendations])
 
   useEffect(() => {
     if (activeTab === 'guess') return
@@ -628,7 +735,7 @@ export default function HomePage() {
             setSelectedGenre('')
             setSearchQuery('')
             setCurrentPage(1)
-            if (v === 'airing') setSortBy('POPULARITY_DESC')
+            if (v === 'airing' || v === 'recommendations') setSortBy('POPULARITY_DESC')
           }} className="w-full">
             <TabsList className="w-full sm:w-auto inline-flex gap-1 mb-6 bg-card/70 border border-border/70 p-1.5 rounded-2xl backdrop-blur flex-wrap">
               {tabConfig.map((tab) => {

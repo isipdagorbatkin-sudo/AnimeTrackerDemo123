@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, List, Loader2, Play, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, List, Loader2, Play, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { saveContinueWatching } from '@/components/anime/ContinueWatching'
 
@@ -12,6 +12,8 @@ interface PlayerEpisode {
   iframeUrl: string
   duration?: number
   views?: number
+  thumbnail?: string
+  airedAt?: string
 }
 
 interface PlayerSource {
@@ -62,6 +64,13 @@ function formatDuration(seconds?: number): string {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
   return `${minutes}:${String(rest).padStart(2, '0')}`
+}
+
+function formatEpisodeDate(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function cleanPlayerName(value: string): string {
@@ -124,8 +133,10 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
   const [error, setError] = useState('')
   const [sourceMenuTab, setSourceMenuTab] = useState<SourceMenuTab>('dubbing')
   const [episodesExpanded, setEpisodesExpanded] = useState(false)
+  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<number>>(new Set())
 
   const storageKey = useMemo(() => `anime-player:${idMal || animeTitle}`, [animeTitle, idMal])
+  const watchedStorageKey = useMemo(() => `anime-player:watched:${idMal || animeId || animeTitle}`, [animeId, animeTitle, idMal])
 
   const selectedSource = useMemo(
     () => sources.find((source) => source.key === selectedSourceKey) || sources[0] || null,
@@ -165,6 +176,13 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
       window.localStorage.setItem(storageKey, JSON.stringify({ sourceKey, episodeId }))
     } catch {}
   }, [storageKey])
+
+  const persistWatchedEpisodes = useCallback((next: Set<number>) => {
+    setWatchedEpisodes(new Set(next))
+    try {
+      window.localStorage.setItem(watchedStorageKey, JSON.stringify([...next]))
+    } catch {}
+  }, [watchedStorageKey])
 
   const loadPlayers = useCallback(async () => {
     setLoading(true)
@@ -231,6 +249,15 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
   }, [animeTitle, loadPlayers])
 
   useEffect(() => {
+    let nextWatched = new Set<number>()
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(watchedStorageKey) || '[]')
+      nextWatched = new Set(Array.isArray(saved) ? saved.map(Number).filter(Boolean) : [])
+    } catch {}
+    queueMicrotask(() => setWatchedEpisodes(nextWatched))
+  }, [watchedStorageKey])
+
+  useEffect(() => {
     setEpisodesExpanded(false)
   }, [selectedSourceKey])
 
@@ -265,6 +292,18 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
     persistChoice(selectedSource.key, episode.id)
   }
 
+  const continueFromEpisode = (episode: PlayerEpisode) => {
+    selectEpisode(episode)
+    document.getElementById('anime-player-frame')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const toggleWatchedEpisode = (episode: PlayerEpisode) => {
+    const next = new Set(watchedEpisodes)
+    if (next.has(episode.number)) next.delete(episode.number)
+    else next.add(episode.number)
+    persistWatchedEpisodes(next)
+  }
+
   const selectEpisodeByOffset = (offset: number) => {
     if (!selectedSource || selectedEpisodeIndex < 0) return
     const nextEpisode = selectedSource.episodes[selectedEpisodeIndex + offset]
@@ -280,7 +319,7 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
 
   return (
     <div className="space-y-4">
-      <div className="relative mx-auto aspect-video w-full max-w-5xl max-h-[62svh] overflow-hidden rounded-sm border border-border/35 bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
+      <div id="anime-player-frame" className="relative mx-auto aspect-video w-full max-w-5xl max-h-[62svh] overflow-hidden rounded-sm border border-border/35 bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         {selectedEpisode?.iframeUrl ? (
           <iframe
             key={selectedEpisode.iframeUrl}
@@ -453,48 +492,103 @@ export function YummyPlayer({ animeTitle, animeId, fallbackTitles, idMal, year, 
             ) : null}
           </div>
           <div className="space-y-2">
-            {visibleEpisodes.map((episode) => (
-              <button
-                key={episode.id}
-                type="button"
-                onClick={() => selectEpisode(episode)}
-                disabled={loading}
-                className={cn(
-                  'group grid w-full grid-cols-[96px_minmax(0,1fr)] items-stretch overflow-hidden rounded-sm border text-left transition-colors sm:grid-cols-[180px_minmax(0,1fr)_120px]',
-                  selectedEpisode?.id === episode.id
-                    ? 'border-primary/70 bg-primary/10'
-                    : 'border-border/35 bg-card/45 hover:border-primary/40 hover:bg-muted/35'
-                )}
-              >
-                <span className="relative block h-20 overflow-hidden bg-[#111113] sm:h-24">
-                  {previewImageUrl ? (
-                    <img
-                      src={previewImageUrl}
-                      alt=""
-                      className="h-full w-full object-cover opacity-70 transition-opacity duration-150 group-hover:opacity-85"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="block h-full w-full bg-[linear-gradient(135deg,#151518,#232326)]" />
+            {visibleEpisodes.map((episode) => {
+              const watched = watchedEpisodes.has(episode.number)
+              const episodeDate = formatEpisodeDate(episode.airedAt)
+              const episodeImage = episode.thumbnail || previewImageUrl
+
+              return (
+                <div
+                  key={episode.id}
+                  className={cn(
+                    'group grid w-full grid-cols-[96px_minmax(0,1fr)] overflow-hidden rounded-sm border text-left transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 sm:grid-cols-[178px_minmax(0,1fr)_168px]',
+                    selectedEpisode?.id === episode.id
+                      ? 'border-primary/70 bg-primary/10'
+                      : 'border-border/35 bg-card/45 hover:border-primary/40 hover:bg-muted/35'
                   )}
-                  <span className="absolute inset-0 bg-gradient-to-r from-black/10 to-black/65" />
-                  <span className="absolute left-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 text-[0.65rem] font-bold text-black">
-                    {episode.number}
-                  </span>
-                </span>
-                <span className="flex min-w-0 flex-col justify-center px-3 py-2 sm:px-4">
-                  <span className="line-clamp-1 text-sm font-semibold text-foreground sm:text-base">
-                    {episode.label === 'Плеер' ? `Серия ${episode.number}` : episode.label}
-                  </span>
-                  <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                    {cleanPlayerName(selectedSource.player)} · {cleanDubbingName(selectedSource.dubbing)}
-                  </span>
-                </span>
-                <span className="hidden items-center justify-end border-l border-border/25 px-3 text-xs text-muted-foreground sm:flex">
-                  {episode.duration ? formatDuration(episode.duration) : `Эп. ${episode.number}`}
-                </span>
-              </button>
-            ))}
+                >
+                  <button
+                    type="button"
+                    onClick={() => continueFromEpisode(episode)}
+                    disabled={loading}
+                    className="relative block h-20 overflow-hidden bg-[#111113] text-left disabled:cursor-not-allowed disabled:opacity-60 sm:h-24"
+                    aria-label={`Открыть серию ${episode.number}`}
+                  >
+                    {episodeImage ? (
+                      <img
+                        src={episodeImage}
+                        alt=""
+                        className="h-full w-full object-cover opacity-70 transition-transform duration-300 group-hover:scale-[1.03] group-hover:opacity-90"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="block h-full w-full bg-[linear-gradient(135deg,#151518,#232326)]" />
+                    )}
+                    <span className="absolute inset-0 bg-gradient-to-r from-black/5 to-black/68" />
+                    <span className="absolute left-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 text-[0.65rem] font-bold text-black">
+                      {episode.number}
+                    </span>
+                    {watched && (
+                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-sm bg-black/70 px-2 py-1 text-[0.65rem] font-semibold text-emerald-300 backdrop-blur">
+                        <Check className="h-3 w-3" />
+                        Смотрел
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="flex min-w-0 flex-col justify-center px-3 py-2 sm:px-4">
+                    <button
+                      type="button"
+                      onClick={() => continueFromEpisode(episode)}
+                      disabled={loading}
+                      className="min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="line-clamp-1 text-sm font-semibold text-foreground sm:text-base">
+                        {episode.label === 'Плеер' ? `Серия ${episode.number}` : episode.label}
+                      </span>
+                    </button>
+                    <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                      {cleanPlayerName(selectedSource.player)} · {cleanDubbingName(selectedSource.dubbing)}
+                    </span>
+                    <span className="mt-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span>№ {episode.number}</span>
+                      {episode.duration ? <span>{formatDuration(episode.duration)}</span> : null}
+                      {episodeDate ? (
+                        <span className="inline-flex items-center gap-1 normal-case tracking-normal">
+                          <CalendarDays className="h-3 w-3" />
+                          {episodeDate}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+
+                  <div className="col-span-2 flex items-center justify-between gap-2 border-t border-border/25 px-3 py-2 sm:col-span-1 sm:flex-col sm:items-stretch sm:justify-center sm:border-l sm:border-t-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleWatchedEpisode(episode)}
+                      className={cn(
+                        'inline-flex h-8 items-center justify-center gap-1.5 rounded-sm border px-2 text-xs font-semibold transition-colors',
+                        watched
+                          ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15'
+                          : 'border-border/45 bg-background/35 text-muted-foreground hover:border-emerald-500/35 hover:text-foreground'
+                      )}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      {watched ? 'Смотрел' : 'Отметить'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => continueFromEpisode(episode)}
+                      disabled={loading}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-sm bg-primary px-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Продолжить
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
           {hasHiddenEpisodes && (
             <button

@@ -30,10 +30,21 @@ type YummyVideo = {
   index?: number
   views?: number
   duration?: number
+  thumbnail?: string
+  preview?: string
+  image?: string
+  date?: string
+  aired_at?: string
+  created_at?: string
   data?: {
     player?: string
     dubbing?: string
     player_id?: number
+    thumbnail?: string
+    preview?: string
+    image?: string
+    date?: string
+    aired_at?: string
   }
   skips?: {
     opening?: { time?: number; length?: number } | null
@@ -52,6 +63,8 @@ type YummySource = {
     iframeUrl: string
     duration?: number
     views?: number
+    thumbnail?: string
+    airedAt?: string
     skips?: YummyVideo['skips']
   }[]
 }
@@ -140,6 +153,8 @@ function buildSources(videos: YummyVideo[]): YummySource[] {
     const key = `${player}:${dubbing}`
     const number = Number(video.number || 0) || 1
     const iframeUrl = absolutizeUrl(video.iframe_url)
+    const thumbnail = absolutizeUrl(video.data?.thumbnail || video.data?.preview || video.data?.image || video.thumbnail || video.preview || video.image)
+    const airedAt = video.data?.aired_at || video.data?.date || video.aired_at || video.date || video.created_at
     if (!iframeUrl) continue
 
     const source = map.get(key) || {
@@ -157,6 +172,8 @@ function buildSources(videos: YummyVideo[]): YummySource[] {
         iframeUrl,
         duration: video.duration,
         views: video.views,
+        thumbnail: thumbnail || undefined,
+        airedAt: airedAt || undefined,
         skips: video.skips,
       })
     }
