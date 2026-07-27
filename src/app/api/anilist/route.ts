@@ -33,19 +33,32 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
-    if (response.status >= 500) {
+    if (!response.ok || response.status >= 500) {
       return NextResponse.json(data, {
         status: response.status,
         headers: { 'Access-Control-Allow-Origin': '*' },
       })
     }
 
-    cache.set(cacheKey, { data, timestamp: Date.now() })
+    const hasGraphQLErrors = data?.errors && data.errors.length > 0 && !data?.data
+    const hasDisabledMessage = data?.errors?.some?.((e: any) =>
+      typeof e?.message === 'string' && (
+        e.message.includes('temporarily disabled') ||
+        e.message.includes('stability issues') ||
+        e.message.includes('maintenance')
+      )
+    )
+
+    if (!hasGraphQLErrors && !hasDisabledMessage) {
+      cache.set(cacheKey, { data, timestamp: Date.now() })
+    }
 
     return NextResponse.json(data, {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=60, s-maxage=60',
+        'Cache-Control': hasGraphQLErrors || hasDisabledMessage
+          ? 'no-store'
+          : 'public, max-age=60, s-maxage=60',
         'X-Cache': 'MISS',
       },
     })
