@@ -148,12 +148,12 @@ async function queryAniList<T>(query: string, variables: Record<string, unknown>
     body: JSON.stringify({ query, variables }),
   })
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err?.message || `AniList API error: ${response.status}`)
-  }
+  const body = await response.json().catch(() => ({}))
 
-  const body = await response.json()
+  if (!response.ok) {
+    const msg = body?.errors?.[0]?.message || body?.message || `AniList API error: ${response.status}`
+    throw new Error(msg)
+  }
 
   if (body.errors && !body.data) {
     throw new Error(body.errors[0]?.message || 'AniList GraphQL error')
