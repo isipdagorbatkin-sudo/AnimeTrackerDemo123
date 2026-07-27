@@ -25,14 +25,13 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
-  const [isGuest, setIsGuest] = useState(true)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || !username) return
 
     const loadUserId = async () => {
       try {
@@ -40,16 +39,13 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           setUserId(user.id)
-          setIsGuest(false)
-        } else {
-          setIsGuest(true)
         }
       } catch (error) {
         console.error('Ошибка при загрузке ID пользователя:', error)
       }
     }
     loadUserId()
-  }, [mounted])
+  }, [mounted, username])
 
   const handleLogout = async () => {
     setLoading(true)
@@ -74,17 +70,7 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
       .slice(0, 2)
   }
 
-  if (!mounted) {
-    return (
-      <div className="relative">
-        <Avatar>
-          <AvatarFallback>U</AvatarFallback>
-        </Avatar>
-      </div>
-    )
-  }
-
-  if (isGuest) {
+  if (!username) {
     return (
       <div className="flex items-center gap-2">
         <Link href="/login">
@@ -99,6 +85,16 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
             <span className="hidden sm:inline">Регистрация</span>
           </Button>
         </Link>
+      </div>
+    )
+  }
+
+  if (!mounted) {
+    return (
+      <div className="relative">
+        <Avatar>
+          <AvatarFallback>{getInitials(username)}</AvatarFallback>
+        </Avatar>
       </div>
     )
   }

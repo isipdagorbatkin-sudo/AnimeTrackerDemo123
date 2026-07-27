@@ -30,7 +30,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { searchWithRussian } from '@/lib/search'
 import { motion } from 'framer-motion'
-import { useRussianText } from '@/lib/russian-cache'
+import { useRussianText, fetchRussianText, getRussianText } from '@/lib/russian-cache'
 import { cleanAnimeDescription } from '@/lib/anime-text'
 import { GuestBanner } from '@/components/auth/GuestBanner'
 
@@ -151,6 +151,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabType>('airing')
   const [animeList, setAnimeList] = useState<AniListAnime[]>([])
   const [heroAnimeList, setHeroAnimeList] = useState<AniListAnime[]>([])
+  const [heroRussianTitles, setHeroRussianTitles] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedGenre, setSelectedGenre] = useState<string>('')
@@ -352,9 +353,24 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false
-    getAiringAnime(1, 20, 'POPULARITY_DESC')
-      .then((result) => {
-        if (!cancelled) setHeroAnimeList(dedupeAnime(result.Page?.media || []))
+    Promise.all([
+      getAiringAnime(1, 20, 'POPULARITY_DESC').catch(() => null),
+      getAiringAnime(2, 20, 'POPULARITY_DESC').catch(() => null),
+    ])
+      .then(async (results) => {
+        if (cancelled) return
+        const all = results.flatMap(r => r?.Page?.media || [])
+        const unique = dedupeAnime(all)
+        setHeroAnimeList(unique)
+        const titleMap: Record<number, string> = {}
+        await Promise.all(unique.map(async (anime) => {
+          if (anime.idMal) {
+            await fetchRussianText(anime.idMal, anime.title?.english, anime.title?.romaji, anime.title?.native)
+            const ru = getRussianText(anime.idMal)
+            if (ru?.title) titleMap[anime.id] = ru.title
+          }
+        }))
+        if (!cancelled) setHeroRussianTitles(titleMap)
       })
       .catch(() => {
         if (!cancelled) setHeroAnimeList([])
@@ -598,9 +614,9 @@ export default function HomePage() {
     setGuessStep('result')
   }
 
-  const heroAnime = (heroAnimeList.length ? heroAnimeList : animeList).slice(0, 14)
-  const heroLeft = heroAnime.slice(0, 7)
-  const heroRight = heroAnime.slice(7, 14)
+  const heroAnime = (heroAnimeList.length ? heroAnimeList : animeList).slice(0, 28)
+  const heroLeft = heroAnime.slice(0, 14)
+  const heroRight = heroAnime.slice(14, 28)
   const renderHeroRail = (items: AniListAnime[], direction: 'up' | 'down') => {
     const loopItems = items.length > 0 ? [...items, ...items] : []
     return (
@@ -608,7 +624,7 @@ export default function HomePage() {
         <div className={cn('hero-anime-rail', direction === 'down' && 'hero-anime-rail-down')}>
           {loopItems.map((anime, index) => {
             const image = getProxiedImageUrl(getCoverImage(anime))
-            const heroTitle = anime.title?.romaji || anime.title?.english || anime.title?.native || ''
+            const heroTitle = heroRussianTitles[anime.id] || anime.title?.romaji || anime.title?.english || anime.title?.native || ''
             return (
               <Link
                 key={`${direction}-${anime.id}-${index}`}
