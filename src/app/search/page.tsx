@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Search, Sparkles, ChevronDown, Compass } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { GuestBanner } from '@/components/auth/GuestBanner'
 
 export default function SearchPage() {
   const [query, setQuery] = useState('')
@@ -278,6 +279,9 @@ export default function SearchPage() {
               <p className="text-foreground-secondary text-lg">
                 Введите название аниме для поиска
               </p>
+              <div className="mt-8 max-w-md mx-auto">
+                <GuestBanner variant="inline" />
+              </div>
             </div>
           )}
         </div>

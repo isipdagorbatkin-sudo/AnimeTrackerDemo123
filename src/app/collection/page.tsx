@@ -10,6 +10,7 @@ import { getAnimeById } from '@/lib/anilist/client'
 import { fetchRussianText, getRussianText } from '@/lib/russian-cache'
 import { normalizeAnimeTitleKey } from '@/lib/anime-text'
 import { Database } from '@/types/database'
+import { GuestBanner } from '@/components/auth/GuestBanner'
 
 type AnimeCollection = Database['public']['Tables']['anime_collection']['Row']
 
@@ -194,8 +195,14 @@ export default function CollectionPage() {
       <section className="px-4 pb-16">
         <div className="container mx-auto">
           {error && (
-            <div className="mb-6 bg-destructive/10 border border-destructive/30 text-destructive px-6 py-4 rounded-xl">
-              {error}
+            <div className="mb-6">
+              {error === 'Вы не авторизованы' ? (
+                <GuestBanner variant="banner" />
+              ) : (
+                <div className="bg-destructive/10 border border-destructive/30 text-destructive px-6 py-4 rounded-xl">
+                  {error}
+                </div>
+              )}
             </div>
           )}
 
@@ -224,11 +231,12 @@ export default function CollectionPage() {
               <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/20 mb-6">
                 <BookOpen className="h-10 w-10 text-primary" />
               </div>
-              <p className="text-muted-foreground text-xl">
+              <p className="text-muted-foreground text-xl mb-6">
                 {activeTab === 'all'
                   ? 'Ваша коллекция пуста. Найдите аниме в поиске!'
                   : 'В этом разделе пока ничего нет.'}
               </p>
+              <GuestBanner variant="inline" />
             </div>
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">

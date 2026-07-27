@@ -1,9 +1,7 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { BookOpen, MessageSquare, TrendingUp, Sparkles, Flame } from 'lucide-react'
 import { CollectionAnimeCard } from '@/components/anime/CollectionAnimeCard'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { GuestBanner } from '@/components/auth/GuestBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -21,19 +19,8 @@ export default async function DashboardPage() {
             <p className="text-foreground-secondary mt-3 text-sm sm:text-base">
               Войдите, чтобы открыть дашборд, коллекцию и социальные функции.
             </p>
-            <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/login"
-                className={buttonVariants({ size: 'lg' })}
-              >
-                Войти
-              </Link>
-              <Link
-                href="/"
-                className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'border-primary/30 hover:border-primary/50')}
-              >
-                На главную
-              </Link>
+            <div className="mt-7">
+              <GuestBanner variant="card" />
             </div>
           </div>
         </div>

@@ -26,6 +26,7 @@ import { getProxiedImageUrl } from '@/lib/image-proxy'
 import { createClient } from '@/lib/supabase/client'
 import { translateGenre } from '@/lib/genres'
 import { cleanAnimeDescription } from '@/lib/anime-text'
+import { GuestBanner } from '@/components/auth/GuestBanner'
 import Link from 'next/link'
 
 const DESCRIPTION_LIMIT = 750
@@ -670,6 +671,8 @@ export default function AnimePage() {
         animeId={animeId}
         animeTitle={title}
       />
+
+      <GuestBanner variant="banner" />
     </div>
   )
 }

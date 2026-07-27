@@ -32,6 +32,7 @@ import { searchWithRussian } from '@/lib/search'
 import { motion } from 'framer-motion'
 import { useRussianText } from '@/lib/russian-cache'
 import { cleanAnimeDescription } from '@/lib/anime-text'
+import { GuestBanner } from '@/components/auth/GuestBanner'
 
 type TabType = 'airing' | 'recommendations' | 'top' | 'upcoming' | 'completed' | 'movies' | 'guess'
 type GuessMode = 'description' | 'frames'
@@ -1066,6 +1067,8 @@ export default function HomePage() {
         selectedGenre={selectedGenre}
         onGenreSelect={(genre) => { setSelectedGenre(genre); setSearchQuery('') }}
       />
+
+      <GuestBanner variant="banner" />
     </div>
   )
 }
