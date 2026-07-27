@@ -718,7 +718,7 @@ export default function HomePage() {
                 />
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <label className="relative h-11 min-w-[210px]">
+                <label className="relative h-11 w-full sm:min-w-[210px] sm:w-auto">
                   <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <select
                     value={sortBy}
@@ -775,7 +775,7 @@ export default function HomePage() {
             setCurrentPage(1)
             if (v === 'airing' || v === 'recommendations') setSortBy('POPULARITY_DESC')
           }} className="w-full">
-            <TabsList className="w-full sm:w-auto inline-flex gap-1 mb-6 bg-card/70 border border-border/70 p-1.5 rounded-2xl backdrop-blur flex-wrap">
+            <TabsList className="w-full sm:w-auto inline-flex gap-1 mb-6 bg-card/70 border border-border/70 p-1.5 rounded-2xl backdrop-blur overflow-x-auto no-scrollbar">
               {tabConfig.map((tab) => {
                 const Icon = tab.icon
                 return (
@@ -783,7 +783,7 @@ export default function HomePage() {
                     key={tab.value}
                     value={tab.value}
                     className={cn(
-                      'data-active:bg-primary data-active:text-primary-foreground rounded-xl text-xs sm:text-sm h-8 gap-1.5 px-3',
+                      'data-active:bg-primary data-active:text-primary-foreground rounded-xl text-xs sm:text-sm h-8 gap-1.5 px-3 shrink-0 whitespace-nowrap',
                       'data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground'
                     )}
                   >

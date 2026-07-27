@@ -466,34 +466,34 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
             <TabsList className="bg-input border h-auto flex gap-1 overflow-x-auto mb-8 no-scrollbar">
-              <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Коллекция ({uniqueCollectionCount})
               </TabsTrigger>
-              <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 <Trophy className="h-4 w-4 mr-1" />
                 Достижения ({unlockedAchievements.length}/{achievements.length})
               </TabsTrigger>
-              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Смотрю ({watchingItems.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Просмотрено ({completedItems.length})
               </TabsTrigger>
-              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 В планах ({planItems.length})
               </TabsTrigger>
-              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Брошено ({droppedItems.length})
               </TabsTrigger>
-              <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 <ListMusic className="h-4 w-4 mr-1" />
                 Плейлисты ({safePlaylists.length})
               </TabsTrigger>
-              <TabsTrigger value="comments" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="comments" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 <MessageCircle className="h-4 w-4 mr-1" />
                 Комментарии ({safeComments.length})
               </TabsTrigger>
-              <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Статистика
               </TabsTrigger>
             </TabsList>

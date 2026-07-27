@@ -85,7 +85,7 @@ export function GuestBanner({ variant = 'banner', className }: GuestBannerProps)
 
   return (
     <div className={cn(
-      'fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#111113]/95 backdrop-blur-xl md:left-60',
+      'fixed bottom-20 left-0 right-0 z-50 border-t border-white/10 bg-[#111113]/95 backdrop-blur-xl md:bottom-0 md:left-60',
       'pb-[env(safe-area-inset-bottom)]',
       className
     )}>

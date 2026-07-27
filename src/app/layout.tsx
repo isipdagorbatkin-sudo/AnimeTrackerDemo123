@@ -65,7 +65,7 @@ export default async function RootLayout({
                 {children}
               </div>
             </main>
-            <MobileNavigation />
+            <MobileNavigation userId={user?.id} />
           </>
         ) : (
           <main className="min-h-screen">

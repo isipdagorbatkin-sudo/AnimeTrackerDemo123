@@ -154,10 +154,10 @@ export default function ChatPage() {
         <div className="container mx-auto max-w-3xl">
           <Tabs defaultValue="chats">
             <TabsList className="bg-input border h-auto flex gap-1 overflow-x-auto mb-6 no-scrollbar">
-              <TabsTrigger value="chats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="chats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Чаты ({chats.length})
               </TabsTrigger>
-              <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
+              <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Пользователи ({allUsers.length})
               </TabsTrigger>
             </TabsList>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Library, Search, BarChart3, Sparkles } from 'lucide-react'
+import { Home, Library, Search, BarChart3, Sparkles, User, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -13,7 +13,11 @@ const navItems = [
   { href: '/search', label: 'Поиск', icon: Search },
 ]
 
-export function MobileNavigation() {
+interface MobileNavigationProps {
+  userId?: string | null
+}
+
+export function MobileNavigation({ userId }: MobileNavigationProps) {
   const pathname = usePathname()
 
   return (
@@ -26,7 +30,7 @@ export function MobileNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center w-14 gap-0.5"
+              className="flex flex-col items-center justify-center flex-1 gap-0.5 min-w-0"
             >
               <div className={cn(
                 'flex items-center justify-center w-8 h-8 rounded-sm transition-colors duration-150',
@@ -46,6 +50,31 @@ export function MobileNavigation() {
             </Link>
           )
         })}
+
+        <Link
+          href={userId ? `/profile/${userId}` : '/login'}
+          className="flex flex-col items-center justify-center flex-1 gap-0.5 min-w-0"
+        >
+          <div className={cn(
+            'flex items-center justify-center w-8 h-8 rounded-sm transition-colors duration-150',
+            (pathname.startsWith('/profile') || pathname === '/login') && 'bg-primary/15 shadow-[0_0_16px_rgba(239,68,68,0.22)]'
+          )}>
+            {userId ? (
+              <User className={cn(
+                'h-[1.125rem] w-[1.125rem] transition-colors duration-150',
+                pathname.startsWith('/profile') ? 'text-primary' : 'text-muted-foreground'
+              )} />
+            ) : (
+              <LogIn className="h-[1.125rem] w-[1.125rem] transition-colors duration-150 text-muted-foreground" />
+            )}
+          </div>
+          <span className={cn(
+            'text-[0.5rem] font-medium transition-colors duration-150',
+            (pathname.startsWith('/profile') || pathname === '/login') ? 'text-primary' : 'text-muted-foreground'
+          )}>
+            {userId ? 'Профиль' : 'Вход'}
+          </span>
+        </Link>
       </div>
     </nav>
   )

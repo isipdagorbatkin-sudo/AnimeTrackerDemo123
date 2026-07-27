@@ -208,19 +208,19 @@ export default function CollectionPage() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
             <TabsList className="bg-input border h-12 flex gap-1 overflow-x-auto w-full no-scrollbar">
-              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
+              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Все ({counts.all})
               </TabsTrigger>
-              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
+              <TabsTrigger value="watching" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Смотрю ({counts.watching})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
+              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Просмотрено ({counts.completed})
               </TabsTrigger>
-              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
+              <TabsTrigger value="plan_to_watch" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 В планах ({counts.plan_to_watch})
               </TabsTrigger>
-              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
+              <TabsTrigger value="dropped" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0 whitespace-nowrap">
                 Брошено ({counts.dropped})
               </TabsTrigger>
             </TabsList>
