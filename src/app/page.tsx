@@ -1049,6 +1049,12 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="max-w-7xl mx-auto">
+          <GuestBanner variant="inline" />
+        </div>
+      </section>
+
       <footer className="border-t border-border py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -1067,8 +1073,6 @@ export default function HomePage() {
         selectedGenre={selectedGenre}
         onGenreSelect={(genre) => { setSelectedGenre(genre); setSearchQuery('') }}
       />
-
-      <GuestBanner variant="banner" />
     </div>
   )
 }

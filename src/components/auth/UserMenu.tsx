@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, LogOut, Settings, Sparkles } from 'lucide-react'
+import { User, LogOut, Settings, Sparkles, LogIn, UserPlus } from 'lucide-react'
 
 interface UserMenuProps {
   username?: string
@@ -24,6 +25,7 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [isGuest, setIsGuest] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -38,6 +40,9 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           setUserId(user.id)
+          setIsGuest(false)
+        } else {
+          setIsGuest(true)
         }
       } catch (error) {
         console.error('Ошибка при загрузке ID пользователя:', error)
@@ -75,6 +80,25 @@ export function UserMenu({ username, avatarUrl }: UserMenuProps) {
         <Avatar>
           <AvatarFallback>U</AvatarFallback>
         </Avatar>
+      </div>
+    )
+  }
+
+  if (isGuest) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link href="/login">
+          <Button size="sm" variant="ghost" className="gap-1.5 text-white/70 hover:text-white hover:bg-white/10">
+            <LogIn className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Войти</span>
+          </Button>
+        </Link>
+        <Link href="/register">
+          <Button size="sm" className="gap-1.5 rounded-sm bg-primary hover:bg-red-500">
+            <UserPlus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Регистрация</span>
+          </Button>
+        </Link>
       </div>
     )
   }

@@ -153,7 +153,7 @@ export default function ChatPage() {
       <section className="px-4 pb-16">
         <div className="container mx-auto max-w-3xl">
           <Tabs defaultValue="chats">
-            <TabsList className="bg-input border h-auto mb-6">
+            <TabsList className="bg-input border h-auto flex gap-1 overflow-x-auto mb-6 no-scrollbar">
               <TabsTrigger value="chats" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Чаты ({chats.length})
               </TabsTrigger>
@@ -208,7 +208,7 @@ export default function ChatPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-sm text-white/30 truncate">
                               {chat.lastMessage || 'Нет сообщений'}
                             </p>
                           </div>

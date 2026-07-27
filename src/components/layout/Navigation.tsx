@@ -93,9 +93,6 @@ export function Navigation({ username, avatarUrl }: NavigationProps) {
       </button>
 
       <div className="flex shrink-0 items-center gap-5">
-        <Link href="/profile/settings" className="transition-colors hover:text-white">
-          How to use
-        </Link>
         <UserMenu username={username} avatarUrl={avatarUrl} />
       </div>
     </header>

@@ -465,7 +465,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       <section className="px-4 pb-16 mt-12">
         <div className="container mx-auto max-w-4xl">
           <Tabs defaultValue="collection">
-            <TabsList className="bg-input border h-auto flex-wrap mb-8">
+            <TabsList className="bg-input border h-auto flex gap-1 overflow-x-auto mb-8 no-scrollbar">
               <TabsTrigger value="collection" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
                 Коллекция ({uniqueCollectionCount})
               </TabsTrigger>

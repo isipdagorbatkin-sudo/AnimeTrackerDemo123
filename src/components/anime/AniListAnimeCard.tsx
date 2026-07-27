@@ -118,7 +118,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             </div>
           </Link>
 
-          <div className="space-y-1.5 bg-[#111113] p-2.5">
+          <div className="space-y-1.5 bg-[#111113] p-2.5 min-h-[140px] flex flex-col">
           <Link href={`/anime/${anime.id}`}>
             <h3 className="line-clamp-2 min-h-9 text-[0.78rem] font-semibold leading-snug tracking-tight text-white/90 transition-colors duration-150 group-hover:text-primary sm:text-[0.82rem]">
               {title}
@@ -156,7 +156,7 @@ export function AniListAnimeCard({ anime, isInCollection, onAddToCollection }: A
             </div>
           )}
 
-          <div className="flex gap-1 pt-1">
+          <div className="flex gap-1 pt-1 mt-auto">
             <Button
               size="sm"
               variant={isInCollection ? "outline" : "default"}

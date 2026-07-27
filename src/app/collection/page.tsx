@@ -207,7 +207,7 @@ export default function CollectionPage() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-            <TabsList className="bg-input border h-12 overflow-x-auto w-full">
+            <TabsList className="bg-input border h-12 flex gap-1 overflow-x-auto w-full no-scrollbar">
               <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-foreground shrink-0">
                 Все ({counts.all})
               </TabsTrigger>
